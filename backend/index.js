@@ -8,6 +8,7 @@ const authRoutes = require('./src/routes/authRoutes/auth.routes');
 const hrRoutes = require('./src/routes/hrRoutes/hr.routes');
 const employeeRoutes = require('./src/routes/employeeRoutes/employee.routes');
 const errorMiddleware = require('./src/middlewares/errorHandleMiddleware/error.middleware');
+const ensureDateColumns = require('./src/utils/ensureDateColumns');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,7 +30,8 @@ app.use(errorMiddleware);
 
 sequelize
   .authenticate()
-  .then(() => {
+  .then(async () => {
+    await ensureDateColumns(sequelize);
     console.log('Database connected successfully');
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

@@ -8,6 +8,7 @@ const hrMenu = [
   { to: "/hr/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/hr/employees", label: "Employees", icon: Users },
   { to: "/hr/exams", label: "Exams Library", icon: ClipboardList },
+  { to: "/hr/assigned-exams", label: "Assigned Exams", icon: FileText },
   { to: "/hr/results", label: "Recent Results", icon: History },
 ];
 

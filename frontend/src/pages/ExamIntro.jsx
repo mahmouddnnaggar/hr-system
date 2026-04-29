@@ -1,15 +1,22 @@
-import { AlertCircle, ClipboardList } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
-import Button from "../components/common/Button";
-import ErrorMessage from "../components/common/ErrorMessage";
-import LoadingState from "../components/common/LoadingState";
-import StatusBadge from "../components/common/StatusBadge";
-import useAsyncData from "../hooks/useAsyncData";
-import { employeeApi } from "../services/employeeApi";
+import { AlertCircle, ClipboardList } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import Button from '../components/common/Button';
+import ErrorMessage from '../components/common/ErrorMessage';
+import LoadingState from '../components/common/LoadingState';
+import StatusBadge from '../components/common/StatusBadge';
+import useAsyncData from '../hooks/useAsyncData';
+import { employeeApi } from '../services/employeeApi';
 
 export default function ExamIntro() {
   const { assignmentId } = useParams();
-  const { data: assignment, loading, error } = useAsyncData(() => employeeApi.startAssignment(assignmentId), [assignmentId]);
+  const {
+    data: assignment,
+    loading,
+    error,
+  } = useAsyncData(
+    () => employeeApi.startAssignment(assignmentId),
+    [assignmentId],
+  );
 
   if (loading) return <LoadingState label="Loading evaluation" />;
   if (error) return <ErrorMessage message={error} />;
@@ -24,19 +31,31 @@ export default function ExamIntro() {
             <ClipboardList size={32} />
           </div>
           <StatusBadge status={exam?.difficulty} />
-          <h2 className="mt-4 text-2xl font-bold leading-tight text-slate-900">{exam?.title}</h2>
-          <p className="mt-1 text-sm text-slate-500">Verification session required</p>
+          <h2 className="mt-4 text-2xl font-bold leading-tight text-slate-900">
+            {exam?.title}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Verification session required
+          </p>
         </div>
 
         <div className="space-y-8 p-8">
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-center">
-              <p className="mb-1 text-[10px] font-bold uppercase text-slate-400">Metrics</p>
-              <p className="text-2xl font-bold text-slate-900">{exam?.questions?.length || exam?.questions_count}</p>
+              <p className="mb-1 text-[10px] font-bold uppercase text-slate-400">
+                Metrics
+              </p>
+              <p className="text-2xl font-bold text-slate-900">
+                {exam?.questions?.length || exam?.questions_count}
+              </p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-center">
-              <p className="mb-1 text-[10px] font-bold uppercase text-slate-400">Evidence</p>
-              <p className="text-2xl font-bold italic text-slate-900">Mandatory</p>
+              <p className="mb-1 text-[10px] font-bold uppercase text-slate-400">
+                Evidence
+              </p>
+              <p className="text-2xl font-bold italic text-slate-900">
+                Mandatory
+              </p>
             </div>
           </div>
 
@@ -62,11 +81,20 @@ export default function ExamIntro() {
           </div>
 
           <div className="flex flex-col gap-3 pt-6 sm:flex-row">
-            <Button as={Link} to="/employee/dashboard" variant="outline" className="flex-1">
+            <Button
+              as={Link}
+              to="/employee/dashboard"
+              variant="outline"
+              className="flex-1"
+            >
               Cancel
             </Button>
-            <Button as={Link} to={`/employee/exams/${assignment.id}/slides`} className="flex-[2] uppercase">
-              Authorize & Begin
+            <Button
+              as={Link}
+              to={`/employee/exams/${assignment.id}/slides`}
+              className="flex-[2] uppercase"
+            >
+              <span className="text-white">Authorize & Begin</span>
             </Button>
           </div>
         </div>

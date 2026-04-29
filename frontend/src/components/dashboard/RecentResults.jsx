@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import DataTable from "../common/DataTable";
 import StatusBadge from "../common/StatusBadge";
-import { formatScore } from "../../lib/utils";
+import { formatDate, formatScore } from "../../lib/utils";
 
 export default function RecentResults({ results }) {
   const columns = [
@@ -24,6 +24,26 @@ export default function RecentResults({ results }) {
           <StatusBadge status={result.assignment?.exam?.difficulty} />
         </div>
       ),
+    },
+    {
+      key: "examDate",
+      header: "Exam Date",
+      cellClassName: "text-sm font-medium text-slate-600",
+      render: (result) => formatDate(result.completed_at || result.createdAt),
+    },
+    {
+      key: "assignedBy",
+      header: "Assigned By",
+      render: (result) => {
+        const assignedBy = result.assignment?.assignedBy;
+
+        return (
+          <div>
+            <p className="text-sm font-bold text-slate-900">{assignedBy?.name || "Unknown HR"}</p>
+            {assignedBy?.email ? <p className="text-xs text-slate-500">{assignedBy.email}</p> : null}
+          </div>
+        );
+      },
     },
     {
       key: "score",

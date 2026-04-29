@@ -10,6 +10,12 @@ export const hrApi = {
   assignExam(payload) {
     return api.post("/hr/assign-exam", payload);
   },
+  getAssignments() {
+    return api.get("/hr/assignments");
+  },
+  unassignExam(assignmentId, assignedBy) {
+    return api.delete(`/hr/assignments/${assignmentId}`, { data: { assigned_by: assignedBy } });
+  },
   getResults() {
     return api.get("/hr/results");
   },

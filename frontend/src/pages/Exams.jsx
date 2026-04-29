@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import ExamCard from "../components/exams/ExamCard";
 import ErrorMessage from "../components/common/ErrorMessage";
 import LoadingState from "../components/common/LoadingState";
@@ -23,8 +24,11 @@ export default function Exams() {
       setAssigning(true);
       setAssignError("");
       await hrApi.assignExam({ ...values, assigned_by: currentUser.id });
+      toast.success("Exam assigned successfully");
     } catch (err) {
-      setAssignError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      setAssignError(message);
+      toast.error(message);
       throw err;
     } finally {
       setAssigning(false);

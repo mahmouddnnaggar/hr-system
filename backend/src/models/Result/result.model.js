@@ -21,6 +21,11 @@ const Result = sequelize.define(
     final_score: {
       type: DataTypes.FLOAT,
       allowNull: false
+    },
+    completed_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
     }
   },
   {

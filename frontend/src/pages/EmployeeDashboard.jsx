@@ -1,30 +1,36 @@
-import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, Award, ChevronRight, ClipboardList, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
-import Button from "../components/common/Button";
-import EmptyState from "../components/common/EmptyState";
-import ErrorMessage from "../components/common/ErrorMessage";
-import LoadingState from "../components/common/LoadingState";
-import PageTitle from "../components/common/PageTitle";
-import StatCard from "../components/common/StatCard";
-import StatusBadge from "../components/common/StatusBadge";
-import { useAuth } from "../context/AuthContext";
-import { formatScore, getErrorMessage } from "../lib/utils";
-import { liveQueryOptions } from "../lib/queryClient";
-import { employeeApi } from "../services/employeeApi";
+import { useQuery } from '@tanstack/react-query';
+import {
+  AlertCircle,
+  Award,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import Button from '../components/common/Button';
+import EmptyState from '../components/common/EmptyState';
+import ErrorMessage from '../components/common/ErrorMessage';
+import LoadingState from '../components/common/LoadingState';
+import PageTitle from '../components/common/PageTitle';
+import StatCard from '../components/common/StatCard';
+import StatusBadge from '../components/common/StatusBadge';
+import { useAuth } from '../context/AuthContext';
+import { formatScore, getErrorMessage } from '../lib/utils';
+import { liveQueryOptions } from '../lib/queryClient';
+import { employeeApi } from '../services/employeeApi';
 
 export default function EmployeeDashboard() {
   const { currentUser } = useAuth();
 
   const assignmentsQuery = useQuery({
-    queryKey: ["employee", currentUser.id, "assigned-exams"],
+    queryKey: ['employee', currentUser.id, 'assigned-exams'],
     queryFn: () => employeeApi.getEmployeeExams(currentUser.id),
     enabled: Boolean(currentUser?.id),
     ...liveQueryOptions,
   });
 
   const resultsQuery = useQuery({
-    queryKey: ["employee", currentUser.id, "results"],
+    queryKey: ['employee', currentUser.id, 'results'],
     queryFn: () => employeeApi.getEmployeeResults(currentUser.id),
     enabled: Boolean(currentUser?.id),
   });
@@ -36,9 +42,14 @@ export default function EmployeeDashboard() {
 
   const assignments = assignmentsQuery.data || [];
   const results = resultsQuery.data || [];
-  const pending = assignments.filter((assignment) => assignment.status === "PENDING");
+  const pending = assignments.filter(
+    assignment => assignment.status === 'PENDING',
+  );
   const averageScore = results.length
-    ? results.reduce((sum, result) => sum + Number(result.final_score || 0), 0) / results.length
+    ? results.reduce(
+        (sum, result) => sum + Number(result.final_score || 0),
+        0,
+      ) / results.length
     : 0;
 
   return (
@@ -48,20 +59,34 @@ export default function EmployeeDashboard() {
         description="Compliance overview and pending tasks"
         action={
           <Button as={Link} to="/employee/exams" className="w-full sm:w-auto">
-            Access Evaluations
-            <ChevronRight size={16} />
+            <span className="text-white">Access Evaluations</span>
+            <span className="text-white">
+              {' '}
+              <ChevronRight size={16} />
+            </span>
           </Button>
         }
       />
 
-      <ErrorMessage message={error ? getErrorMessage(error) : ""} />
+      <ErrorMessage message={error ? getErrorMessage(error) : ''} />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <StatCard label="Total Tasks" value={assignments.length} icon={ClipboardList} />
-        <StatCard label="Awaiting Action" value={pending.length} icon={AlertCircle} color="text-amber-600" bg="bg-amber-50" delay={0.05} />
+        <StatCard
+          label="Total Tasks"
+          value={assignments.length}
+          icon={ClipboardList}
+        />
+        <StatCard
+          label="Awaiting Action"
+          value={pending.length}
+          icon={AlertCircle}
+          color="text-amber-600"
+          bg="bg-amber-50"
+          delay={0.05}
+        />
         <StatCard
           label="Performance Rating"
-          value={results.length ? `${formatScore(averageScore)}/5` : "--"}
+          value={results.length ? `${formatScore(averageScore)}/5` : '--'}
           icon={Award}
           color="text-emerald-600"
           bg="bg-emerald-50"
@@ -79,7 +104,7 @@ export default function EmployeeDashboard() {
             <EmptyState title="You are fully compliant with all assigned evaluations." />
           ) : (
             <div className="space-y-1">
-              {pending.map((assignment) => (
+              {pending.map(assignment => (
                 <Link
                   key={assignment.id}
                   to={`/employee/exams/${assignment.id}/intro`}
@@ -90,10 +115,14 @@ export default function EmployeeDashboard() {
                       <FileText size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{assignment.exam?.title}</p>
+                      <p className="text-sm font-bold text-slate-900">
+                        {assignment.exam?.title}
+                      </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <StatusBadge status={assignment.exam?.difficulty} />
-                        <span className="text-[10px] font-bold uppercase text-slate-400">{assignment.exam?.questions_count} Metrics</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400">
+                          {assignment.exam?.questions_count} Metrics
+                        </span>
                       </div>
                     </div>
                   </div>

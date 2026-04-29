@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import AssignExam from "../pages/AssignExam";
+import Assignments from "../pages/Assignments";
 import EmployeeDashboard from "../pages/EmployeeDashboard";
 import EmployeeResults from "../pages/EmployeeResults";
 import Employees from "../pages/Employees";
@@ -46,6 +47,8 @@ export default function AppRoutes() {
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/employees" element={<Employees />} />
             <Route path="/hr/exams" element={<Exams />} />
+            <Route path="/hr/assignments" element={<Assignments />} />
+            <Route path="/hr/assigned-exams" element={<Assignments />} />
             <Route path="/hr/assign-exam" element={<AssignExam />} />
             <Route path="/hr/results" element={<Results />} />
             <Route path="/hr/results/:employeeId/:resultId" element={<ResultDetails />} />

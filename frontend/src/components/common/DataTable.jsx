@@ -1,5 +1,14 @@
 import EmptyState from "./EmptyState";
 
+function getHeaderAlignmentClass(column) {
+  const alignmentSource = `${column.className || ""} ${column.cellClassName || ""}`;
+
+  if (alignmentSource.includes("text-right")) return "text-right";
+  if (alignmentSource.includes("text-center")) return "text-center";
+
+  return "";
+}
+
 export default function DataTable({ columns, data, emptyMessage = "No records found" }) {
   if (!data?.length) {
     return <EmptyState title={emptyMessage} />;
@@ -12,7 +21,10 @@ export default function DataTable({ columns, data, emptyMessage = "No records fo
           <thead className="border-b border-slate-100 bg-slate-50 text-[10px] font-bold uppercase text-slate-500">
             <tr>
               {columns.map((column) => (
-                <th key={column.key} className={`px-6 py-4 ${column.className || ""}`}>
+                <th
+                  key={column.key}
+                  className={`px-6 py-4 ${getHeaderAlignmentClass(column)} ${column.className || ""}`}
+                >
                   {column.header}
                 </th>
               ))}

@@ -44,6 +44,7 @@ export default function ResultDetails() {
   const assignment = data.assignment;
   const exam = assignment.exam || result.assignment?.exam;
   const employee = result.assignment?.employee || (isHR ? assignment.employee : currentUser);
+  const assignedBy = assignment.assignedBy || result.assignment?.assignedBy;
   const answers = sortAnswersByQuestions(exam?.questions, assignment.answers);
   const backTo = inHrArea ? "/hr/results" : "/employee/results";
 
@@ -59,11 +60,17 @@ export default function ResultDetails() {
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <StatusBadge status="COMPLETED" />
-              <span className="text-[10px] font-bold uppercase text-slate-400">Logged: {formatDate(result.createdAt)}</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400">
+                Exam Date: {formatDate(result.completed_at || result.createdAt)}
+              </span>
             </div>
             <h3 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">{exam?.title}</h3>
             <p className="mt-1 font-medium text-slate-500">
               Personnel Record for <span className="font-bold text-slate-900">{employee?.name}</span>
+            </p>
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              Assigned by <span className="font-bold text-slate-900">{assignedBy?.name || "Unknown HR"}</span>
+              {assignedBy?.email ? <span className="text-slate-400"> ({assignedBy.email})</span> : null}
             </p>
           </div>
           <div className="min-w-32 rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm">

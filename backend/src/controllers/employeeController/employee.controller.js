@@ -27,6 +27,7 @@ const startAssignment = asyncHandler(async (req, res) => {
         as: 'exam',
         include: [{ model: Question, as: 'questions', attributes: ['id', 'question_text'] }]
       },
+      { model: User, as: 'assignedBy', attributes: ['id', 'name', 'email'] },
       { model: Answer, as: 'answers' }
     ]
   });
@@ -150,7 +151,8 @@ const finishExam = asyncHandler(async (req, res) => {
       {
         assignment_id,
         total_score: totalScore,
-        final_score: finalScore
+        final_score: finalScore,
+        completed_at: new Date()
       },
       { transaction }
     );
@@ -175,7 +177,10 @@ const getEmployeeResults = asyncHandler(async (req, res) => {
         model: Assignment,
         as: 'assignment',
         where: { employee_id: employeeId },
-        include: [{ model: Exam, as: 'exam', attributes: ['id', 'title', 'difficulty', 'questions_count'] }]
+        include: [
+          { model: Exam, as: 'exam', attributes: ['id', 'title', 'difficulty', 'questions_count'] },
+          { model: User, as: 'assignedBy', attributes: ['id', 'name', 'email'] }
+        ]
       }
     ],
     order: [['id', 'DESC']]

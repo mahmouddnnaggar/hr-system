@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import AssignExamForm from "../components/forms/AssignExamForm";
 import ErrorMessage from "../components/common/ErrorMessage";
 import LoadingState from "../components/common/LoadingState";
@@ -25,9 +26,12 @@ export default function AssignExam() {
       setSubmitting(true);
       setSubmitError("");
       await hrApi.assignExam({ ...values, assigned_by: currentUser.id });
+      toast.success("Exam assigned successfully");
       navigate("/hr/exams");
     } catch (err) {
-      setSubmitError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }

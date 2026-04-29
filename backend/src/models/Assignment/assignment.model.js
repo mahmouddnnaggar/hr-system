@@ -21,6 +21,11 @@ const Assignment = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false
     },
+    assigned_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
+    },
     status: {
       type: DataTypes.ENUM('PENDING', 'COMPLETED'),
       allowNull: false,

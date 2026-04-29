@@ -6,7 +6,7 @@ import ErrorMessage from "../components/common/ErrorMessage";
 import LoadingState from "../components/common/LoadingState";
 import PageTitle from "../components/common/PageTitle";
 import StatusBadge from "../components/common/StatusBadge";
-import { formatScore, getErrorMessage } from "../lib/utils";
+import { formatDate, formatScore, getErrorMessage } from "../lib/utils";
 import { liveQueryOptions } from "../lib/queryClient";
 import { hrApi } from "../services/hrApi";
 
@@ -51,6 +51,26 @@ export default function Results() {
           <StatusBadge status={result.assignment?.exam?.difficulty} />
         </div>
       ),
+    },
+    {
+      key: "examDate",
+      header: "Exam Date",
+      cellClassName: "text-sm font-medium text-slate-600",
+      render: (result) => formatDate(result.completed_at || result.createdAt),
+    },
+    {
+      key: "assignedBy",
+      header: "Assigned By",
+      render: (result) => {
+        const assignedBy = result.assignment?.assignedBy;
+
+        return (
+          <div>
+            <p className="text-sm font-bold text-slate-900">{assignedBy?.name || "Unknown HR"}</p>
+            {assignedBy?.email ? <p className="text-xs text-slate-500">{assignedBy.email}</p> : null}
+          </div>
+        );
+      },
     },
     {
       key: "score",

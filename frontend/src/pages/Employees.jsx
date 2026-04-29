@@ -3,7 +3,6 @@ import DataTable from "../components/common/DataTable";
 import ErrorMessage from "../components/common/ErrorMessage";
 import LoadingState from "../components/common/LoadingState";
 import PageTitle from "../components/common/PageTitle";
-import StatusBadge from "../components/common/StatusBadge";
 import { getInitials } from "../lib/utils";
 import useAsyncData from "../hooks/useAsyncData";
 import { hrApi } from "../services/hrApi";
@@ -34,11 +33,6 @@ export default function Employees() {
           </div>
         </div>
       ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: () => <StatusBadge status="Active" className="border-emerald-100 bg-emerald-50 text-emerald-700" />,
     },
     {
       key: "completed",
