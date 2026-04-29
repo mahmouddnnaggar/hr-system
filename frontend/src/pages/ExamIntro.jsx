@@ -54,7 +54,7 @@ export default function ExamIntro() {
                 Evidence
               </p>
               <p className="text-2xl font-bold italic text-slate-900">
-                Mandatory
+                Optional
               </p>
             </div>
           </div>
@@ -71,7 +71,7 @@ export default function ExamIntro() {
               </li>
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />
-                <span>Upload photographic evidence for every selection.</span>
+                <span>Upload photographic evidence when it is available.</span>
               </li>
               <li className="flex gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />

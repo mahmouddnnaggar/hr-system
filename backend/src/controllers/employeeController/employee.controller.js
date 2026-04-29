@@ -50,10 +50,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'selected_answer must be NO, PARTIAL, or YES' });
   }
 
-  if (!req.file) {
-    return res.status(400).json({ message: 'Image proof is required' });
-  }
-
   const assignment = await Assignment.findByPk(assignment_id, {
     include: [{ model: Exam, as: 'exam' }]
   });
@@ -78,7 +74,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
   }
 
   const score = calculateAnswerScore(selected_answer);
-  const imageUrl = `/uploads/${req.file.filename}`;
+  const uploadedImageUrl = req.file?.filename ? `/uploads/${req.file.filename}` : null;
 
   const existingAnswer = await Answer.findOne({
     where: { assignment_id, question_id }
@@ -88,7 +84,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
     await existingAnswer.update({
       selected_answer,
       score,
-      image_url: imageUrl
+      image_url: uploadedImageUrl ?? existingAnswer.image_url
     });
 
     return res.json({
@@ -102,7 +98,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
     question_id,
     selected_answer,
     score,
-    image_url: imageUrl
+    image_url: uploadedImageUrl
   });
 
   res.status(201).json({

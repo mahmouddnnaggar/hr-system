@@ -6,21 +6,49 @@ const currentTimestampColumn = {
   defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
 };
 
-async function ensureColumn(queryInterface, tableName, columnName, definition) {
-  let table;
+const optionalImageUrlColumn = {
+  type: DataTypes.STRING,
+  allowNull: true
+};
 
+async function describeTable(queryInterface, tableName) {
   try {
-    table = await queryInterface.describeTable(tableName);
+    return await queryInterface.describeTable(tableName);
   } catch (error) {
     if (error.name === 'SequelizeDatabaseError' && /doesn't exist|Unknown table/i.test(error.message)) {
-      return;
+      return null;
     }
 
     throw error;
   }
+}
+
+async function ensureColumn(queryInterface, tableName, columnName, definition) {
+  const table = await describeTable(queryInterface, tableName);
+
+  if (!table) {
+    return;
+  }
 
   if (!table[columnName]) {
     await queryInterface.addColumn(tableName, columnName, definition);
+  }
+}
+
+async function ensureNullableColumn(queryInterface, tableName, columnName, definition) {
+  const table = await describeTable(queryInterface, tableName);
+
+  if (!table) {
+    return;
+  }
+
+  if (!table[columnName]) {
+    await queryInterface.addColumn(tableName, columnName, definition);
+    return;
+  }
+
+  if (table[columnName].allowNull === false) {
+    await queryInterface.changeColumn(tableName, columnName, definition);
   }
 }
 
@@ -29,6 +57,7 @@ async function ensureDateColumns(sequelize) {
 
   await ensureColumn(queryInterface, 'assignments', 'assigned_at', currentTimestampColumn);
   await ensureColumn(queryInterface, 'results', 'completed_at', currentTimestampColumn);
+  await ensureNullableColumn(queryInterface, 'answers', 'image_url', optionalImageUrlColumn);
 }
 
 module.exports = ensureDateColumns;

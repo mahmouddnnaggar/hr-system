@@ -12,7 +12,9 @@ export const employeeApi = {
     formData.append("assignment_id", assignment_id);
     formData.append("question_id", question_id);
     formData.append("selected_answer", selected_answer);
-    formData.append("image", image);
+    if (image instanceof File) {
+      formData.append("image", image);
+    }
 
     return api.post("/employee/submit-answer", formData);
   },

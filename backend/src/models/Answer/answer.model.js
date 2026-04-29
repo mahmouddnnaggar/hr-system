@@ -27,7 +27,7 @@ const Answer = sequelize.define(
     },
     image_url: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
     }
   },
   {

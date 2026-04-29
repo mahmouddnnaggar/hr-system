@@ -28,7 +28,7 @@ export default function QuestionSlide({
               </div>
               <h3 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">{question?.question_text}</h3>
               <p className="text-sm font-medium text-slate-500">
-                Please assess the compliance status for this criterion based on direct evidence.
+                Please assess the compliance status for this criterion. Evidence can be attached when available.
               </p>
             </div>
 

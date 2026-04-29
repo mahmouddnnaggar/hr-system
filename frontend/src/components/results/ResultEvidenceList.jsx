@@ -1,5 +1,6 @@
 import StatusBadge from "../common/StatusBadge";
 import { getFileUrl } from "../../lib/utils";
+import { ImageOff } from "lucide-react";
 
 export default function ResultEvidenceList({ questions = [], answers = [] }) {
   return (
@@ -30,7 +31,14 @@ export default function ResultEvidenceList({ questions = [], answers = [] }) {
             </div>
             <div className="md:col-span-7">
               <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-inner">
-                <img src={getFileUrl(answer.image_url)} alt="Submitted evidence" className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+                {answer.image_url ? (
+                  <img src={getFileUrl(answer.image_url)} alt="Submitted evidence" className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-slate-400">
+                    <ImageOff size={32} />
+                    <p className="text-xs font-bold uppercase">No visual evidence submitted</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

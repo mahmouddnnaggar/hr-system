@@ -79,14 +79,10 @@ export default function ExamSlides() {
     if (!valid || !currentQuestion) return null;
 
     const answer = answers[currentQuestion.id];
-    if (!answer?.selected_answer || (!answer.image && !answer.imageUrl)) return null;
+    if (!answer?.selected_answer) return null;
 
     if (!answer.image && answer.imageUrl && answer.submitted) {
       return answer;
-    }
-
-    if (!answer.image) {
-      throw new Error("Image proof is required");
     }
 
     const response = await employeeApi.submitAnswer({
@@ -99,7 +95,8 @@ export default function ExamSlides() {
     const savedAnswer = {
       ...answer,
       score: response.answer.score,
-      imageUrl: response.answer.image_url,
+      image: null,
+      imageUrl: response.answer.image_url || answer.imageUrl || null,
       submitted: true,
     };
 
@@ -126,7 +123,7 @@ export default function ExamSlides() {
 
       const missing = questions.find((question) => {
         const answer = finalAnswers[question.id];
-        return !answer?.selected_answer || (!answer.image && !answer.imageUrl);
+        return !answer?.selected_answer;
       });
 
       if (missing) {
