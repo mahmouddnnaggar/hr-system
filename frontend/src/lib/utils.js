@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { getApiOrigin } from "./apiUrl";
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -30,11 +31,6 @@ export function formatScore(value) {
 
 export function getErrorMessage(error, fallback = "Something went wrong") {
   return error?.response?.data?.message || error?.message || fallback;
-}
-
-export function getApiOrigin() {
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-  return baseUrl.replace(/\/api\/?$/, "").replace(/\/$/, "");
 }
 
 export function getFileUrl(path) {

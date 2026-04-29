@@ -1,4 +1,24 @@
-# React + TypeScript + Vite
+# HR Evaluation Exam Frontend
+
+React + Vite frontend for the HR Evaluation Exam System.
+
+## Environment Variables
+
+Create a local `.env` file from `.env.example`:
+
+```env
+VITE_API_URL=http://localhost:3000/api
+```
+
+For Vercel, set `VITE_API_URL` in the project environment variables to your deployed backend API URL, including `/api`.
+
+Example:
+
+```env
+VITE_API_URL=https://your-backend-domain.com/api
+```
+
+After changing this value in Vercel, redeploy the frontend because Vite injects `VITE_*` variables during the build.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
