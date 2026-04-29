@@ -1,6 +1,7 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import { useAuth } from "../context/AuthContext";
+import { getDashboardPath, USER_ROLES } from "../lib/auth";
 import AssignExam from "../pages/AssignExam";
 import Assignments from "../pages/Assignments";
 import EmployeeDashboard from "../pages/EmployeeDashboard";
@@ -14,25 +15,12 @@ import Login from "../pages/Login";
 import MyExams from "../pages/MyExams";
 import ResultDetails from "../pages/ResultDetails";
 import Results from "../pages/Results";
+import ProtectedRoute from "./ProtectedRoute";
 
 function RoleRedirect() {
   const { currentUser } = useAuth();
   if (!currentUser) return <Navigate to="/login" replace />;
-  return <Navigate to={currentUser.role === "HR" ? "/hr/dashboard" : "/employee/dashboard"} replace />;
-}
-
-function RequireAuth() {
-  const { currentUser } = useAuth();
-  if (!currentUser) return <Navigate to="/login" replace />;
-  return <Outlet />;
-}
-
-function RequireRole({ role }) {
-  const { currentUser } = useAuth();
-  if (currentUser?.role !== role) {
-    return <Navigate to={currentUser?.role === "HR" ? "/hr/dashboard" : "/employee/dashboard"} replace />;
-  }
-  return <Outlet />;
+  return <Navigate to={getDashboardPath(currentUser)} replace />;
 }
 
 export default function AppRoutes() {
@@ -41,9 +29,9 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<RoleRedirect />} />
 
-      <Route element={<RequireAuth />}>
+      <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route element={<RequireRole role="HR" />}>
+          <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.HR]} />}>
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/employees" element={<Employees />} />
             <Route path="/hr/exams" element={<Exams />} />
@@ -54,7 +42,7 @@ export default function AppRoutes() {
             <Route path="/hr/results/:employeeId/:resultId" element={<ResultDetails />} />
           </Route>
 
-          <Route element={<RequireRole role="EMPLOYEE" />}>
+          <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.EMPLOYEE]} />}>
             <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
             <Route path="/employee/exams" element={<MyExams />} />
             <Route path="/employee/exams/:assignmentId/intro" element={<ExamIntro />} />
