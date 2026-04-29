@@ -1,8 +1,34 @@
 # HR Evaluation Exam Frontend
 
-React + Vite frontend for the HR Evaluation Exam System.
+React + Vite client for the HR Evaluation Exam System.
 
-## Environment Variables
+For the complete full-stack setup guide, see the root `README.md`.
+
+## Features
+
+- Email-only demo login.
+- Role-based routing for HR and employee users.
+- HR screens for dashboard, employees, exams, assignments, and results.
+- Employee screens for dashboard, assigned exams, exam slides, evidence uploads, and personal results.
+- Shared API client powered by Axios.
+- Form validation with React Hook Form and Zod.
+- Server state management with TanStack Query.
+
+## Tech Stack
+
+- React 19
+- Vite
+- React Router
+- TanStack Query
+- Axios
+- Tailwind CSS 4
+- React Hook Form
+- Zod
+- Framer Motion
+- Sonner
+- Lucide React
+
+## Environment
 
 Create a local `.env` file from `.env.example`:
 
@@ -10,7 +36,9 @@ Create a local `.env` file from `.env.example`:
 VITE_API_URL=http://localhost:3000/api
 ```
 
-For Vercel, set `VITE_API_URL` in the project environment variables to your deployed backend API URL, including `/api`.
+`VITE_API_URL` must include `/api`.
+
+For production, set `VITE_API_URL` to the deployed backend API URL before building or redeploying.
 
 Example:
 
@@ -18,78 +46,43 @@ Example:
 VITE_API_URL=https://your-backend-domain.com/api
 ```
 
-After changing this value in Vercel, redeploy the frontend because Vite injects `VITE_*` variables during the build.
+## Setup
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Requires Node.js `^20.19.0` or `>=22.12.0`.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The development server usually runs at:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```txt
+http://localhost:5173
 ```
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite development server. |
+| `npm run build` | Build the app for production. |
+| `npm run preview` | Preview the production build locally. |
+| `npm run lint` | Run ESLint. |
+
+## Deployment
+
+The project includes `vercel.json` with a rewrite rule for React Router:
+
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+When deploying to Vercel or another static host, configure `VITE_API_URL` and redeploy after changes.

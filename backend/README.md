@@ -1,23 +1,25 @@
-# HR Evaluation Exam System
+# HR Evaluation Exam Backend
 
-Backend-only educational project using Node.js, Express.js, MySQL, Sequelize ORM, multer, and Excel exam imports.
+Node.js API for the HR Evaluation Exam System.
+
+For the complete full-stack setup guide, see the root `README.md`.
 
 ## Features
 
-- Simple email-only login for predefined users
-- 3 seeded HR users and 10 seeded employee users
-- 10 predefined exams imported from Excel files in `src/data/exams`
-- HR users can assign exams to employees
-- Employees answer each question with `NO`, `PARTIAL`, or `YES`
-- Every answer requires an uploaded image proof
-- Results are calculated from 5 and stored in MySQL
+- Email-only demo login for predefined users.
+- Seeded HR and employee accounts.
+- Excel-based exam imports from `src/data/exams`.
+- HR assignment and results endpoints.
+- Employee exam-taking endpoints.
+- Required image evidence upload for every answer.
+- Automatic final score calculation out of 5.
 
 ## Tech Stack
 
 - Node.js
-- Express.js
+- Express
 - MySQL
-- Sequelize ORM
+- Sequelize
 - mysql2
 - dotenv
 - cors
@@ -25,59 +27,9 @@ Backend-only educational project using Node.js, Express.js, MySQL, Sequelize ORM
 - xlsx
 - nodemon
 
-## Project Structure
+## Environment
 
-```txt
-src/
-  config/
-    db.js
-  controllers/
-    authController/
-    hrController/
-    employeeController/
-  models/
-    User/
-    Exam/
-    Question/
-    Assignment/
-    Answer/
-    Result/
-    index.js
-  routes/
-    authRoutes/
-    hrRoutes/
-    employeeRoutes/
-  middlewares/
-    upload/
-    errorHandleMiddleware/
-  services/
-    excelService/
-    seedService/
-  seeders/
-  data/
-    exams/
-  utils/
-uploads/
-index.js
-package.json
-.env.example
-```
-
-## Setup
-
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Create a MySQL database:
-
-```sql
-CREATE DATABASE hr_evaluation_system;
-```
-
-3. Create `.env` from `.env.example`:
+Create `.env` from `.env.example`:
 
 ```env
 PORT=3000
@@ -87,15 +39,34 @@ DB_PASSWORD=
 DB_NAME=hr_evaluation_system
 ```
 
-4. Seed the database:
+Optional:
+
+```env
+DB_PORT=3306
+MYSQL_URL=mysql://user:password@host:3306/database_name
+```
+
+If `MYSQL_URL` is set, it takes priority over the separate `DB_*` variables.
+
+## Setup
+
+```bash
+npm install
+```
+
+Create the MySQL database:
+
+```sql
+CREATE DATABASE hr_evaluation_system;
+```
+
+Seed the database:
 
 ```bash
 npm run seed
 ```
 
-The seed command resets the tables, creates users, generates/updates the Excel files, and imports exams/questions from Excel.
-
-5. Start the server:
+Start the development server:
 
 ```bash
 npm run dev
@@ -105,6 +76,36 @@ Server URL:
 
 ```txt
 http://localhost:3000
+```
+
+API base URL:
+
+```txt
+http://localhost:3000/api
+```
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the API with nodemon. |
+| `npm start` | Start the API with Node. |
+| `npm run seed` | Reset and seed the database. |
+
+## Project Structure
+
+```txt
+src/
+  config/          Database connection
+  controllers/     Auth, HR, and employee controllers
+  data/exams/      Excel exam source files
+  middlewares/     Upload and error middleware
+  models/          Sequelize models and associations
+  routes/          API routes
+  seeders/         Seed scripts
+  services/        Excel and seed services
+  utils/           Shared backend utilities
+uploads/           Local uploaded images
 ```
 
 ## Seeded Login Emails
@@ -132,7 +133,96 @@ employee9@test.com
 employee10@test.com
 ```
 
-## Score Rules
+## API Overview
+
+All endpoints are prefixed with `/api`.
+
+### Auth
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/auth/login` | Login by seeded user email. |
+
+### HR
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/hr/employees` | List employee users. |
+| `GET` | `/hr/exams` | List exams. |
+| `POST` | `/hr/assign-exam` | Assign an exam to an employee. |
+| `GET` | `/hr/assignments` | List assignments. |
+| `DELETE` | `/hr/assignments/:assignmentId` | Remove an assignment. |
+| `GET` | `/hr/results` | List all results. |
+| `GET` | `/hr/results/:employeeId` | List results for one employee. |
+
+### Employee
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/employee/:employeeId/exams` | List assigned exams. |
+| `GET` | `/employee/assignment/:assignmentId/start` | Load assignment questions. |
+| `POST` | `/employee/submit-answer` | Submit an answer with image evidence. |
+| `POST` | `/employee/finish-exam` | Complete an exam assignment. |
+| `GET` | `/employee/:employeeId/results` | List employee results. |
+
+## Request Examples
+
+Login:
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "hr1@test.com"
+}
+```
+
+Assign exam:
+
+```http
+POST /api/hr/assign-exam
+Content-Type: application/json
+```
+
+```json
+{
+  "exam_id": 1,
+  "employee_id": 4,
+  "assigned_by": 1
+}
+```
+
+Submit answer:
+
+```http
+POST /api/employee/submit-answer
+Content-Type: multipart/form-data
+```
+
+```txt
+assignment_id: 1
+question_id: 1
+selected_answer: YES
+image: image file
+```
+
+Finish exam:
+
+```http
+POST /api/employee/finish-exam
+Content-Type: application/json
+```
+
+```json
+{
+  "assignment_id": 1
+}
+```
+
+## Scoring
 
 ```txt
 NO = 0
@@ -143,124 +233,14 @@ YES = 2
 Final result:
 
 ```txt
-total_score = sum of answer scores
-max_score = number of questions * 2
+total_score = sum(answer scores)
+max_score = number_of_questions * 2
 final_score = (total_score / max_score) * 5
 ```
 
-## Postman Examples
-
-### Auth
-
-#### Login
-
-`POST /api/auth/login`
-
-Body JSON:
-
-```json
-{
-  "email": "hr1@test.com"
-}
-```
-
-Response:
-
-```json
-{
-  "id": 1,
-  "name": "HR User 1",
-  "email": "hr1@test.com",
-  "role": "HR"
-}
-```
-
-### HR
-
-#### Get Employees
-
-`GET /api/hr/employees`
-
-#### Get Exams
-
-`GET /api/hr/exams`
-
-#### Assign Exam
-
-`POST /api/hr/assign-exam`
-
-Body JSON:
-
-```json
-{
-  "exam_id": 1,
-  "employee_id": 4,
-  "assigned_by": 1
-}
-```
-
-#### Get All Results
-
-`GET /api/hr/results`
-
-#### Get Results For One Employee
-
-`GET /api/hr/results/4`
-
-### Employee
-
-#### Get Employee Assigned Exams
-
-`GET /api/employee/4/exams`
-
-#### Start Assignment
-
-`GET /api/employee/assignment/1/start`
-
-#### Submit Answer
-
-`POST /api/employee/submit-answer`
-
-Use `multipart/form-data`.
-
-Fields:
-
-```txt
-assignment_id: 1
-question_id: 1
-selected_answer: YES
-image: choose an image file
-```
-
-Allowed answers:
-
-```txt
-NO
-PARTIAL
-YES
-```
-
-#### Finish Exam
-
-`POST /api/employee/finish-exam`
-
-Body JSON:
-
-```json
-{
-  "assignment_id": 1
-}
-```
-
-The employee must submit answers with images for every question before finishing.
-
-#### Get Employee Results
-
-`GET /api/employee/4/results`
-
 ## Notes
 
-- This project intentionally has no JWT, passwords, registration, frontend, Socket.io, Cloudinary, payments, or email services.
-- Uploaded images are stored in the local `uploads` folder.
-- MySQL stores only the image path, not binary image data.
-- This is a beginner-friendly educational backend, so the code favors simple controllers and clear validation.
+- Uploaded images are stored in `uploads/`.
+- MySQL stores image paths, not binary image data.
+- The current demo authentication model has no passwords, registration, or JWT tokens.
+- For production, move evidence uploads to persistent object storage and add a stronger authentication model.
