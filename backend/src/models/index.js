@@ -6,6 +6,7 @@ const Question = require('./Question/question.model');
 const Assignment = require('./Assignment/assignment.model');
 const Answer = require('./Answer/answer.model');
 const Result = require('./Result/result.model');
+const AuditLog = require('./AuditLog/auditLog.model');
 
 User.hasMany(Exam, { foreignKey: 'created_by', as: 'createdExams' });
 Exam.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
@@ -28,6 +29,8 @@ Question.hasMany(Answer, { foreignKey: 'question_id', as: 'answers' });
 Assignment.hasOne(Result, { foreignKey: 'assignment_id', as: 'result' });
 Result.belongsTo(Assignment, { foreignKey: 'assignment_id', as: 'assignment' });
 
+AuditLog.belongsTo(User, { foreignKey: 'actor_id', as: 'actor' });
+
 module.exports = {
   sequelize,
   User,
@@ -35,5 +38,6 @@ module.exports = {
   Question,
   Assignment,
   Answer,
-  Result
+  Result,
+  AuditLog
 };

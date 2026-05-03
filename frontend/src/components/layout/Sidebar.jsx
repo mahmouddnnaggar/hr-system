@@ -1,4 +1,4 @@
-import { Award, ClipboardList, FileText, History, LayoutDashboard, LogOut, Users, X } from "lucide-react";
+import { Award, ClipboardList, FileText, History, LayoutDashboard, LogOut, ShieldCheck, Users, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import Button from "../common/Button";
 import { getInitials, cn } from "../../lib/utils";
@@ -12,6 +12,11 @@ const hrMenu = [
   { to: "/hr/results", label: "Recent Results", icon: History },
 ];
 
+const adminMenu = [
+  { to: "/admin/users", label: "User Approvals", icon: ShieldCheck },
+  { to: "/admin/exams", label: "Exam Library", icon: ClipboardList },
+];
+
 const employeeMenu = [
   { to: "/employee/dashboard", label: "My Portal", icon: LayoutDashboard },
   { to: "/employee/exams", label: "Evaluations", icon: FileText },
@@ -19,8 +24,8 @@ const employeeMenu = [
 ];
 
 export default function Sidebar({ open, onClose }) {
-  const { currentUser, logout, isHR } = useAuth();
-  const menu = isHR ? hrMenu : employeeMenu;
+  const { currentUser, logout, isAdmin, isHR } = useAuth();
+  const menu = isAdmin ? adminMenu : isHR ? hrMenu : employeeMenu;
 
   return (
     <>

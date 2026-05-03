@@ -6,8 +6,12 @@ For the complete full-stack setup guide, see the root `README.md`.
 
 ## Features
 
-- Email-only demo login.
-- Role-based routing for HR and employee users.
+- Email/password login with JWT-backed API requests.
+- HR and employee registration.
+- OTP verification page.
+- Role-based routing for admin, HR, and employee users.
+- Admin user approval screen.
+- Admin exam library screen with manual creation, Excel upload, and exam removal.
 - HR screens for dashboard, employees, exams, assignments, and results.
 - Employee screens for dashboard, assigned exams, exam slides, evidence uploads, and personal results.
 - Shared API client powered by Axios.
@@ -59,6 +63,38 @@ The development server usually runs at:
 
 ```txt
 http://localhost:5173
+```
+
+## Auth Screens
+
+| Route | Description |
+| --- | --- |
+| `/login` | Login with email and password. |
+| `/register` | Register an HR or employee account. |
+| `/verify-otp` | Verify the email OTP after registration. |
+| `/admin/users` | Admin-only screen for approving or rejecting users. |
+| `/admin/exams` | Admin-only screen for creating and removing exams. |
+
+Seeded login accounts after running the backend seed:
+
+```txt
+Admin: mahmoudelnaggar@admin.com / Admin123!
+HR users: hr1@test.com, hr2@test.com, hr3@test.com / Demo123!
+Employee users: employee1@test.com through employee10@test.com / Demo123!
+```
+
+After OTP verification, new accounts still show:
+
+```txt
+Your account is waiting for admin approval.
+```
+
+Admin Excel uploads expect these columns:
+
+```txt
+title
+difficulty
+question_text
 ```
 
 ## Scripts

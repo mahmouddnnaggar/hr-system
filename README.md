@@ -9,7 +9,10 @@ The project is split into two applications:
 
 ## Features
 
-- Email-only demo login for predefined HR and employee users.
+- Email/password authentication with JWT-protected routes.
+- HR and employee registration with email OTP verification.
+- Admin approval flow for pending HR and employee accounts.
+- Admin management for creating/removing exams and removing users.
 - HR dashboard for employees, exams, assignments, and results.
 - HR users can assign and unassign exams for employees.
 - Employees can view assigned exams, answer questions, upload image evidence, and finish exams.
@@ -23,7 +26,7 @@ The project is split into two applications:
 | Layer | Technologies |
 | --- | --- |
 | Frontend | React 19, Vite, React Router, TanStack Query, Axios, Tailwind CSS 4, React Hook Form, Zod, Framer Motion, Sonner, Lucide React |
-| Backend | Node.js, Express, Sequelize, MySQL, mysql2, multer, xlsx, dotenv |
+| Backend | Node.js, Express, Sequelize, MySQL, mysql2, bcrypt, jsonwebtoken, nodemailer, multer, xlsx, dotenv |
 | Tooling | npm, ESLint, Vercel frontend rewrites |
 
 ## Project Structure
@@ -76,6 +79,9 @@ DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=hr_evaluation_system
+JWT_SECRET=change_this_to_a_long_random_secret
+JWT_EXPIRES_IN=1d
+OTP_EXPIRES_MINUTES=10
 ```
 
 Optional variables:
@@ -83,9 +89,17 @@ Optional variables:
 ```env
 DB_PORT=3306
 MYSQL_URL=mysql://user:password@host:3306/database_name
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
 ```
 
 If `MYSQL_URL` is provided, the backend uses it instead of the separate `DB_*` values.
+
+If SMTP variables are empty, the backend prints OTP codes in the backend terminal with a `[DEV OTP]` log. Configure SMTP to send real emails.
 
 ### Frontend
 
@@ -138,6 +152,14 @@ npm --prefix backend run seed
 
 The seed command resets the database tables, creates demo users, generates or updates exam Excel files, and imports exams and questions.
 
+Seeded auth accounts:
+
+```txt
+Admin email: mahmoudelnaggar@admin.com
+Admin password: Admin123!
+Demo HR/Employee password: Demo123!
+```
+
 ### 5. Run the Backend
 
 ```bash
@@ -189,32 +211,74 @@ http://localhost:5173
 | `npm run preview` | Preview the production build locally. |
 | `npm run lint` | Run ESLint. |
 
-## Demo Users
+## Authentication Flow
+
+1. HR or employee registers with name, email, password, and role.
+2. The backend hashes the password with bcrypt, creates the account with `PENDING` status, generates an OTP, stores the OTP hash, and sends the OTP by email.
+3. The user verifies the OTP. This sets `isEmailVerified` to true and clears the OTP fields.
+4. The account still cannot log in until an approved admin approves it.
+5. Login succeeds only when the email is verified and the account status is `APPROVED`.
+6. JWT tokens protect admin, HR, and employee API routes.
+
+Important message after OTP verification:
+
+```txt
+Your account is waiting for admin approval.
+```
+
+## Seeded Users
 
 ### HR Users
 
 ```txt
-hr1@test.com
-hr2@test.com
-hr3@test.com
+hr1@test.com / Demo123!
+hr2@test.com / Demo123!
+hr3@test.com / Demo123!
 ```
 
 ### Employee Users
 
 ```txt
-employee1@test.com
-employee2@test.com
-employee3@test.com
-employee4@test.com
-employee5@test.com
-employee6@test.com
-employee7@test.com
-employee8@test.com
-employee9@test.com
-employee10@test.com
+employee1@test.com / Demo123!
+employee2@test.com / Demo123!
+employee3@test.com / Demo123!
+employee4@test.com / Demo123!
+employee5@test.com / Demo123!
+employee6@test.com / Demo123!
+employee7@test.com / Demo123!
+employee8@test.com / Demo123!
+employee9@test.com / Demo123!
+employee10@test.com / Demo123!
 ```
 
-The demo login uses email only. There are no passwords or JWT tokens in this educational version.
+### Admin User
+
+```txt
+mahmoudelnaggar@admin.com / Admin123!
+```
+
+The admin account is seeded with role `ADMIN`, status `APPROVED`, and verified email.
+
+## How To Test Auth
+
+1. Run `npm --prefix backend run seed`.
+2. Start the backend and frontend.
+3. Open `/register`, create an HR or employee account, then check the email inbox or backend terminal for the OTP.
+4. Open `/verify-otp`, enter the OTP, and confirm the pending approval message appears.
+5. Try logging in before approval; the backend returns `Your account is waiting for admin approval.`
+6. Log in as `mahmoudelnaggar@admin.com` with `Admin123!`.
+7. Open `/admin/users`, approve the pending account, then log in with the new account.
+8. Open `/admin/exams` to add an exam with form inputs or upload an Excel file.
+
+Admin Excel upload columns:
+
+```txt
+title
+difficulty
+question_text
+```
+
+Allowed difficulty values are `EASY`, `MEDIUM`, and `HARD`. The first row supplies the exam title and difficulty, and each row supplies one question.
 
 ## API Overview
 
@@ -224,9 +288,30 @@ All endpoints are prefixed with `/api`.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `POST` | `/auth/login` | Login by seeded user email. |
+| `POST` | `/auth/register` | Register an HR or employee account and send OTP. |
+| `POST` | `/auth/verify-otp` | Verify the email OTP. |
+| `POST` | `/auth/resend-otp` | Send a fresh OTP for an unverified account. |
+| `POST` | `/auth/login` | Login with email and password. |
+
+### Admin
+
+Admin endpoints require a valid approved admin JWT.
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/admin/pending-users` | List pending HR and employee accounts. |
+| `GET` | `/admin/users` | List all users. |
+| `PATCH` | `/admin/users/:userId/approve` | Approve a pending user. |
+| `PATCH` | `/admin/users/:userId/reject` | Reject a pending user. |
+| `DELETE` | `/admin/users/:userId` | Remove a user and related records. |
+| `GET` | `/admin/exams` | List exams. |
+| `POST` | `/admin/exams` | Create an exam from form input. |
+| `POST` | `/admin/exams/upload-excel` | Create an exam from an Excel file. |
+| `DELETE` | `/admin/exams/:examId` | Remove an exam and related records. |
 
 ### HR
+
+HR endpoints require a valid approved HR JWT.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
@@ -239,6 +324,8 @@ All endpoints are prefixed with `/api`.
 | `GET` | `/hr/results/:employeeId` | List results for one employee. |
 
 ### Employee
+
+Employee endpoints require a valid approved employee JWT.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
@@ -303,6 +390,8 @@ final_score = (total_score / max_score) * 5
 | Frontend cannot reach API | Confirm `frontend/.env` has `VITE_API_URL=http://localhost:3000/api` and restart Vite. |
 | Backend cannot connect to MySQL | Check MySQL is running and verify `backend/.env` credentials. |
 | No demo data appears | Run `npm run seed` inside `backend/`. |
+| Login returns JWT secret error | Add `JWT_SECRET` to `backend/.env` and restart the backend. |
+| OTP email does not arrive locally | Check the backend terminal for the `[DEV OTP]` log or configure SMTP variables. |
 | Uploaded images do not display | Make sure the backend is running and that files exist in `backend/uploads`. |
 | Route refresh fails in production frontend | Confirm the hosting provider rewrites all frontend routes to `index.html`. |
 

@@ -1,10 +1,15 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sequelize, User, Exam, Question, Assignment, Answer, Result } = require('../../models');
+const { USER_ROLES, USER_STATUSES } = require('../../utils/auth');
 
 const getEmployees = asyncHandler(async (req, res) => {
   const employees = await User.findAll({
-    where: { role: 'EMPLOYEE' },
-    attributes: ['id', 'name', 'email', 'role'],
+    where: {
+      role: USER_ROLES.EMPLOYEE,
+      status: USER_STATUSES.APPROVED,
+      is_email_verified: true
+    },
+    attributes: ['id', 'name', 'email', 'role', 'status', 'is_email_verified'],
     order: [['id', 'ASC']]
   });
 
@@ -25,31 +30,38 @@ const getExams = asyncHandler(async (req, res) => {
 
 const assignExam = asyncHandler(async (req, res) => {
   const { exam_id, employee_id, assigned_by } = req.body;
+  const assignedBy = req.user.id;
 
-  if (!exam_id || !employee_id || !assigned_by) {
-    return res.status(400).json({ message: 'exam_id, employee_id, and assigned_by are required' });
+  if (!exam_id || !employee_id) {
+    return res.status(400).json({ message: 'exam_id and employee_id are required' });
+  }
+
+  if (assigned_by && Number(assigned_by) !== Number(assignedBy)) {
+    return res.status(403).json({ message: 'You can only assign exams as yourself' });
   }
 
   const exam = await Exam.findByPk(exam_id);
-  const employee = await User.findOne({ where: { id: employee_id, role: 'EMPLOYEE' } });
-  const hrUser = await User.findOne({ where: { id: assigned_by, role: 'HR' } });
+  const employee = await User.findOne({
+    where: {
+      id: employee_id,
+      role: USER_ROLES.EMPLOYEE,
+      status: USER_STATUSES.APPROVED,
+      is_email_verified: true
+    }
+  });
 
   if (!exam) {
     return res.status(404).json({ message: 'Exam not found' });
   }
 
   if (!employee) {
-    return res.status(404).json({ message: 'Employee not found' });
-  }
-
-  if (!hrUser) {
-    return res.status(404).json({ message: 'HR user not found' });
+    return res.status(404).json({ message: 'Approved employee not found' });
   }
 
   const assignment = await Assignment.create({
     exam_id,
     employee_id,
-    assigned_by,
+    assigned_by: assignedBy,
     assigned_at: new Date(),
     status: 'PENDING'
   });
@@ -80,15 +92,10 @@ const getAssignments = asyncHandler(async (req, res) => {
 const unassignExam = asyncHandler(async (req, res) => {
   const { assignmentId } = req.params;
   const { assigned_by } = req.body;
+  const assignedBy = req.user.id;
 
-  if (!assigned_by) {
-    return res.status(400).json({ message: 'assigned_by is required' });
-  }
-
-  const hrUser = await User.findOne({ where: { id: assigned_by, role: 'HR' } });
-
-  if (!hrUser) {
-    return res.status(404).json({ message: 'HR user not found' });
+  if (assigned_by && Number(assigned_by) !== Number(assignedBy)) {
+    return res.status(403).json({ message: 'You can only unassign exams as yourself' });
   }
 
   const assignment = await Assignment.findByPk(assignmentId, {
@@ -99,7 +106,7 @@ const unassignExam = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Assignment not found' });
   }
 
-  if (Number(assignment.assigned_by) !== Number(assigned_by)) {
+  if (Number(assignment.assigned_by) !== Number(assignedBy)) {
     return res.status(403).json({ message: 'Only the HR user who assigned this exam can unassign it' });
   }
 

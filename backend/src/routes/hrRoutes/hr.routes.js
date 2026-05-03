@@ -1,7 +1,11 @@
 const express = require('express');
 const hrController = require('../../controllers/hrController/hr.controller');
+const { authenticate, authorizeRoles } = require('../../middlewares/auth/auth.middleware');
+const { USER_ROLES } = require('../../utils/auth');
 
 const router = express.Router();
+
+router.use(authenticate, authorizeRoles(USER_ROLES.HR));
 
 router.get('/employees', hrController.getEmployees);
 router.get('/exams', hrController.getExams);

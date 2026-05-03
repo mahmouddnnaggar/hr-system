@@ -18,9 +18,31 @@ const User = sequelize.define(
       allowNull: false,
       unique: true
     },
+    password_hash: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     role: {
-      type: DataTypes.ENUM('HR', 'EMPLOYEE'),
+      type: DataTypes.ENUM('ADMIN', 'HR', 'EMPLOYEE'),
       allowNull: false
+    },
+    status: {
+      type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED'),
+      allowNull: false,
+      defaultValue: 'PENDING'
+    },
+    is_email_verified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    otp_hash: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    otp_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   },
   {

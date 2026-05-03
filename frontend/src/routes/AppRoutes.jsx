@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { getDashboardPath, USER_ROLES } from "../lib/auth";
+import AdminExams from "../pages/AdminExams";
+import AdminUsers from "../pages/AdminUsers";
 import AssignExam from "../pages/AssignExam";
 import Assignments from "../pages/Assignments";
 import EmployeeDashboard from "../pages/EmployeeDashboard";
@@ -13,8 +15,10 @@ import Exams from "../pages/Exams";
 import HRDashboard from "../pages/HRDashboard";
 import Login from "../pages/Login";
 import MyExams from "../pages/MyExams";
+import Register from "../pages/Register";
 import ResultDetails from "../pages/ResultDetails";
 import Results from "../pages/Results";
+import VerifyOtp from "../pages/VerifyOtp";
 import ProtectedRoute from "./ProtectedRoute";
 
 function RoleRedirect() {
@@ -27,10 +31,18 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/verify-otp" element={<VerifyOtp />} />
       <Route path="/" element={<RoleRedirect />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
+          <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]} />}>
+            <Route path="/admin/dashboard" element={<Navigate to="/admin/users" replace />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/exams" element={<AdminExams />} />
+          </Route>
+
           <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.HR]} />}>
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/employees" element={<Employees />} />

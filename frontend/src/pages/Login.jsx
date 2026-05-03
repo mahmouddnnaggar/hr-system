@@ -10,6 +10,7 @@ export default function Login() {
   const location = useLocation();
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const message = location.state?.message || "";
   const [loading, setLoading] = useState(false);
   const from = location.state?.from;
 
@@ -29,8 +30,15 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <LoginForm onSubmit={handleLogin} loading={loading} error={error} />
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="w-full max-w-md space-y-4">
+        {message ? (
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+            {message}
+          </div>
+        ) : null}
+        <LoginForm onSubmit={handleLogin} loading={loading} error={error} />
+      </div>
     </div>
   );
 }

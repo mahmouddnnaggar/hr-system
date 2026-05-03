@@ -36,6 +36,10 @@ const startAssignment = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Assignment not found' });
   }
 
+  if (Number(assignment.employee_id) !== Number(req.user.id)) {
+    return res.status(403).json({ message: 'You can only access your own assignments' });
+  }
+
   res.json(assignment);
 });
 
@@ -56,6 +60,10 @@ const submitAnswer = asyncHandler(async (req, res) => {
 
   if (!assignment) {
     return res.status(404).json({ message: 'Assignment not found' });
+  }
+
+  if (Number(assignment.employee_id) !== Number(req.user.id)) {
+    return res.status(403).json({ message: 'You can only submit answers for your own assignments' });
   }
 
   if (assignment.status === 'COMPLETED') {
@@ -124,6 +132,10 @@ const finishExam = asyncHandler(async (req, res) => {
 
   if (!assignment) {
     return res.status(404).json({ message: 'Assignment not found' });
+  }
+
+  if (Number(assignment.employee_id) !== Number(req.user.id)) {
+    return res.status(403).json({ message: 'You can only finish your own assignments' });
   }
 
   if (assignment.result) {
