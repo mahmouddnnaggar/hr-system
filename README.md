@@ -91,6 +91,9 @@ Optional variables:
 ```env
 DB_PORT=3306
 MYSQL_URL=mysql://user:password@host:3306/database_name
+ADMIN_NAME=Default Admin
+ADMIN_EMAIL=mahmoudelnaggar@admin.com
+ADMIN_PASSWORD=Admin123!
 ```
 
 If `MYSQL_URL` is provided, the backend uses it instead of the separate `DB_*` values.
@@ -195,6 +198,7 @@ http://localhost:5173
 | `npm run dev` | Start the API with nodemon. |
 | `npm start` | Start the API with Node. |
 | `npm run seed` | Reset and seed the MySQL database. |
+| `npm run seed:admin` | Create or update one approved admin account without resetting data. |
 
 ### Frontend
 

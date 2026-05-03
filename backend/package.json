@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "seed": "node src/seeders/seedAll.js"
+    "seed": "node src/seeders/seedAll.js",
+    "seed:admin": "node src/seeders/seedAdmin.js"
   },
   "keywords": [
     "node",
