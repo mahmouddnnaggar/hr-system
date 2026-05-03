@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUp, PlusCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import DataTable from "../components/common/DataTable";
 import ErrorMessage from "../components/common/ErrorMessage";
 import Input from "../components/common/Input";
 import LoadingState from "../components/common/LoadingState";
+import PaginationControls from "../components/common/PaginationControls";
 import PageTitle from "../components/common/PageTitle";
 import Select from "../components/common/Select";
 import StatusBadge from "../components/common/StatusBadge";
@@ -27,10 +28,26 @@ export default function AdminExams() {
   const [excelFile, setExcelFile] = useState(null);
   const [formError, setFormError] = useState("");
   const [examToRemove, setExamToRemove] = useState(null);
+  const [filters, setFilters] = useState({
+    search: "",
+    difficulty: "",
+    includeDeleted: false,
+    page: 1,
+  });
+  const examParams = useMemo(
+    () => ({
+      page: filters.page,
+      limit: 10,
+      search: filters.search || undefined,
+      difficulty: filters.difficulty || undefined,
+      includeDeleted: filters.includeDeleted ? "true" : undefined,
+    }),
+    [filters],
+  );
 
   const examsQuery = useQuery({
-    queryKey: ["admin", "exams"],
-    queryFn: () => adminApi.getExams(),
+    queryKey: ["admin", "exams", examParams],
+    queryFn: () => adminApi.getExams(examParams),
   });
 
   const refreshExams = () => queryClient.invalidateQueries({ queryKey: ["admin", "exams"] });
@@ -87,7 +104,12 @@ export default function AdminExams() {
     uploadMutation.mutate(excelFile);
   };
 
-  const exams = examsQuery.data || [];
+  const updateFilter = (name, value) => {
+    setFilters((current) => ({ ...current, [name]: value, page: 1 }));
+  };
+
+  const exams = examsQuery.data?.data || [];
+  const pagination = examsQuery.data?.pagination;
   const error = examsQuery.error || deleteMutation.error;
   const actionPending = createMutation.isPending || uploadMutation.isPending || deleteMutation.isPending;
 
@@ -96,9 +118,10 @@ export default function AdminExams() {
       key: "title",
       header: "Exam",
       render: (exam) => (
-        <div>
+        <div className="space-y-1">
           <p className="text-sm font-bold text-slate-900">{exam.title}</p>
           <p className="text-xs font-medium text-slate-500">{exam.creator?.name || "Admin"}</p>
+          {exam.deleted_at ? <StatusBadge status="REMOVED" /> : null}
         </div>
       ),
     },
@@ -118,7 +141,7 @@ export default function AdminExams() {
       header: "Actions",
       cellClassName: "text-right",
       render: (exam) => (
-        <Button size="sm" variant="danger" onClick={() => setExamToRemove(exam)} disabled={actionPending}>
+        <Button size="sm" variant="danger" onClick={() => setExamToRemove(exam)} disabled={actionPending || Boolean(exam.deleted_at)}>
           <Trash2 size={14} />
           Remove
         </Button>
@@ -213,16 +236,41 @@ export default function AdminExams() {
 
       <section className="space-y-4">
         <h2 className="text-sm font-bold uppercase text-slate-500">All Exams</h2>
+        <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-3">
+          <Input
+            placeholder="Search exams"
+            value={filters.search}
+            onChange={(event) => updateFilter("search", event.target.value)}
+          />
+          <Select value={filters.difficulty} onChange={(event) => updateFilter("difficulty", event.target.value)}>
+            <option value="">All difficulties</option>
+            <option value="EASY">Easy</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HARD">Hard</option>
+          </Select>
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">
+            <input
+              type="checkbox"
+              checked={filters.includeDeleted}
+              onChange={(event) => updateFilter("includeDeleted", event.target.checked)}
+            />
+            Show removed
+          </label>
+        </div>
         <DataTable columns={columns} data={exams} emptyMessage="No exams found" />
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+        />
       </section>
 
       <ConfirmModal
         open={Boolean(examToRemove)}
         title="Remove Exam"
-        description={examToRemove ? `Remove ${examToRemove.title} and related records?` : ""}
+        description={examToRemove ? `Soft delete ${examToRemove.title} and hide it from active lists?` : ""}
         confirmLabel={deleteMutation.isPending ? "Removing..." : "Remove"}
         onCancel={() => setExamToRemove(null)}
-        onConfirm={() => deleteMutation.mutate(examToRemove.id)}
+        onConfirm={() => examToRemove && deleteMutation.mutate(examToRemove.id)}
       />
     </div>
   );

@@ -4,8 +4,8 @@ export const adminApi = {
   getPendingUsers() {
     return api.get("/admin/pending-users");
   },
-  getUsers() {
-    return api.get("/admin/users");
+  getUsers(params) {
+    return api.get("/admin/users", { params });
   },
   approveUser(userId) {
     return api.patch(`/admin/users/${userId}/approve`);
@@ -16,8 +16,8 @@ export const adminApi = {
   deleteUser(userId) {
     return api.delete(`/admin/users/${userId}`);
   },
-  getExams() {
-    return api.get("/admin/exams");
+  getExams(params) {
+    return api.get("/admin/exams", { params });
   },
   createExam(payload) {
     return api.post("/admin/exams", payload);
@@ -29,5 +29,8 @@ export const adminApi = {
   },
   deleteExam(examId) {
     return api.delete(`/admin/exams/${examId}`);
+  },
+  getAuditLogs(params) {
+    return api.get("/admin/audit-logs", { params });
   },
 };

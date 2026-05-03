@@ -24,6 +24,14 @@ const Exam = sequelize.define(
     created_by: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    deleted_by: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     }
   },
   {

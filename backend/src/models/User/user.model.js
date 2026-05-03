@@ -31,17 +31,12 @@ const User = sequelize.define(
       allowNull: false,
       defaultValue: 'PENDING'
     },
-    is_email_verified: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
-    },
-    otp_hash: {
-      type: DataTypes.STRING,
+    deleted_at: {
+      type: DataTypes.DATE,
       allowNull: true
     },
-    otp_expires_at: {
-      type: DataTypes.DATE,
+    deleted_by: {
+      type: DataTypes.INTEGER,
       allowNull: true
     }
   },

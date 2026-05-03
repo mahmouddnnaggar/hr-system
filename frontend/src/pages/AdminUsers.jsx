@@ -5,8 +5,11 @@ import Button from "../components/common/Button";
 import ConfirmModal from "../components/common/ConfirmModal";
 import DataTable from "../components/common/DataTable";
 import ErrorMessage from "../components/common/ErrorMessage";
+import Input from "../components/common/Input";
 import LoadingState from "../components/common/LoadingState";
+import PaginationControls from "../components/common/PaginationControls";
 import PageTitle from "../components/common/PageTitle";
+import Select from "../components/common/Select";
 import StatusBadge from "../components/common/StatusBadge";
 import { useAuth } from "../context/AuthContext";
 import { getErrorMessage, getInitials } from "../lib/utils";
@@ -30,12 +33,37 @@ export default function AdminUsers() {
   const { currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [userToRemove, setUserToRemove] = useState(null);
+  const [filters, setFilters] = useState({
+    search: "",
+    role: "",
+    status: "",
+    includeDeleted: false,
+    page: 1,
+  });
+  const userParams = useMemo(
+    () => ({
+      page: filters.page,
+      limit: 10,
+      search: filters.search || undefined,
+      role: filters.role || undefined,
+      status: filters.status || undefined,
+      includeDeleted: filters.includeDeleted ? "true" : undefined,
+    }),
+    [filters],
+  );
   const usersQuery = useQuery({
-    queryKey: ["admin", "users"],
-    queryFn: () => adminApi.getUsers(),
+    queryKey: ["admin", "users", userParams],
+    queryFn: () => adminApi.getUsers(userParams),
+  });
+  const pendingUsersQuery = useQuery({
+    queryKey: ["admin", "pending-users"],
+    queryFn: () => adminApi.getPendingUsers(),
   });
 
-  const refreshUsers = () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+  const refreshUsers = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "pending-users"] });
+  };
 
   const approveMutation = useMutation({
     mutationFn: (userId) => adminApi.approveUser(userId),
@@ -55,13 +83,16 @@ export default function AdminUsers() {
     },
   });
 
-  const users = useMemo(() => usersQuery.data || [], [usersQuery.data]);
-  const pendingUsers = useMemo(
-    () => users.filter((user) => user.status === "PENDING" && user.role !== "ADMIN"),
-    [users],
-  );
-  const error = usersQuery.error || approveMutation.error || rejectMutation.error || deleteMutation.error;
+  const users = usersQuery.data?.data || [];
+  const pendingUsers = pendingUsersQuery.data || [];
+  const pagination = usersQuery.data?.pagination;
+  const error =
+    usersQuery.error || pendingUsersQuery.error || approveMutation.error || rejectMutation.error || deleteMutation.error;
   const actionPending = approveMutation.isPending || rejectMutation.isPending || deleteMutation.isPending;
+
+  const updateFilter = (name, value) => {
+    setFilters((current) => ({ ...current, [name]: value, page: 1 }));
+  };
 
   const columns = [
     {
@@ -77,15 +108,11 @@ export default function AdminUsers() {
     {
       key: "status",
       header: "Status",
-      render: (user) => <StatusBadge status={user.status} />,
-    },
-    {
-      key: "verified",
-      header: "Email",
       render: (user) => (
-        <span className="text-xs font-bold uppercase text-slate-500">
-          {user.isEmailVerified ? "Verified" : "Not Verified"}
-        </span>
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge status={user.status} />
+          {user.deletedAt ? <StatusBadge status="REMOVED" /> : null}
+        </div>
       ),
     },
     {
@@ -111,7 +138,7 @@ export default function AdminUsers() {
               size="sm"
               variant="danger"
               onClick={() => setUserToRemove(user)}
-              disabled={actionPending || Number(user.id) === Number(currentUser.id)}
+              disabled={actionPending || Number(user.id) === Number(currentUser.id) || Boolean(user.deletedAt)}
             >
               <Trash2 size={14} />
               Remove
@@ -121,7 +148,7 @@ export default function AdminUsers() {
     },
   ];
 
-  if (usersQuery.isPending) return <LoadingState label="Loading users" />;
+  if (usersQuery.isPending || pendingUsersQuery.isPending) return <LoadingState label="Loading users" />;
 
   return (
     <div className="space-y-8">
@@ -135,16 +162,47 @@ export default function AdminUsers() {
 
       <section className="space-y-4">
         <h2 className="text-sm font-bold uppercase text-slate-500">All Users</h2>
+        <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4">
+          <Input
+            placeholder="Search users"
+            value={filters.search}
+            onChange={(event) => updateFilter("search", event.target.value)}
+          />
+          <Select value={filters.role} onChange={(event) => updateFilter("role", event.target.value)}>
+            <option value="">All roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="HR">HR</option>
+            <option value="EMPLOYEE">Employee</option>
+          </Select>
+          <Select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <option value="">All statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+          </Select>
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">
+            <input
+              type="checkbox"
+              checked={filters.includeDeleted}
+              onChange={(event) => updateFilter("includeDeleted", event.target.checked)}
+            />
+            Show removed
+          </label>
+        </div>
         <DataTable columns={columns} data={users} emptyMessage="No users found" />
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+        />
       </section>
 
       <ConfirmModal
         open={Boolean(userToRemove)}
         title="Remove User"
-        description={userToRemove ? `Remove ${userToRemove.name} and related records?` : ""}
+        description={userToRemove ? `Soft delete ${userToRemove.name} and hide this account from active lists?` : ""}
         confirmLabel={deleteMutation.isPending ? "Removing..." : "Remove"}
         onCancel={() => setUserToRemove(null)}
-        onConfirm={() => deleteMutation.mutate(userToRemove.id)}
+        onConfirm={() => userToRemove && deleteMutation.mutate(userToRemove.id)}
       />
     </div>
   );

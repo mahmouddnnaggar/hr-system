@@ -1,14 +1,11 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { User } = require('../../models');
 const bcrypt = require('bcrypt');
-const { sendOtpEmail } = require('../../services/emailService/email.service');
+const logAudit = require('../../utils/auditLog');
 const {
   USER_ROLES,
   USER_STATUSES,
   createToken,
-  generateOtp,
-  getOtpExpiresAt,
-  hashOtp,
   normalizeEmail,
   normalizeRole,
   sanitizeUser
@@ -30,8 +27,8 @@ const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: 'Invalid email or password' });
   }
 
-  if (!user.is_email_verified) {
-    return res.status(403).json({ message: 'Please verify your email before logging in.' });
+  if (user.deleted_at) {
+    return res.status(403).json({ message: 'This account has been removed.' });
   }
 
   if (user.status === USER_STATUSES.PENDING) {
@@ -86,7 +83,6 @@ const register = asyncHandler(async (req, res) => {
     return res.status(409).json({ message: 'Email is already registered' });
   }
 
-  const otp = generateOtp();
   const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await User.create({
@@ -94,88 +90,24 @@ const register = asyncHandler(async (req, res) => {
     email: normalizedEmail,
     password_hash: passwordHash,
     role: normalizedRole,
-    status: USER_STATUSES.PENDING,
-    is_email_verified: false,
-    otp_hash: hashOtp(otp),
-    otp_expires_at: getOtpExpiresAt()
+    status: USER_STATUSES.PENDING
   });
 
-  await sendOtpEmail(user.email, otp);
+  await logAudit({
+    actorId: null,
+    action: 'REGISTER_USER',
+    entityType: 'User',
+    entityId: user.id,
+    message: `Registered ${user.role} user ${user.email}`
+  });
 
   res.status(201).json({
-    message: 'OTP sent to your email. Please verify your email to continue.',
+    message: 'Registration submitted. Your account is waiting for admin approval.',
     email: user.email
   });
 });
 
-const verifyOtp = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
-  const normalizedEmail = normalizeEmail(email);
-
-  if (!normalizedEmail || !otp) {
-    return res.status(400).json({ message: 'Email and OTP are required' });
-  }
-
-  const user = await User.findOne({ where: { email: normalizedEmail } });
-
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-
-  if (user.is_email_verified) {
-    return res.json({ message: 'Your account is waiting for admin approval.' });
-  }
-
-  if (!user.otp_hash || !user.otp_expires_at || new Date(user.otp_expires_at).getTime() < Date.now()) {
-    return res.status(400).json({ message: 'OTP has expired. Please request a new OTP.' });
-  }
-
-  if (hashOtp(otp) !== user.otp_hash) {
-    return res.status(400).json({ message: 'Invalid OTP code' });
-  }
-
-  await user.update({
-    is_email_verified: true,
-    otp_hash: null,
-    otp_expires_at: null
-  });
-
-  res.json({ message: 'Your account is waiting for admin approval.' });
-});
-
-const resendOtp = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const normalizedEmail = normalizeEmail(email);
-
-  if (!normalizedEmail) {
-    return res.status(400).json({ message: 'Email is required' });
-  }
-
-  const user = await User.findOne({ where: { email: normalizedEmail } });
-
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-
-  if (user.is_email_verified) {
-    return res.status(400).json({ message: 'Email is already verified' });
-  }
-
-  const otp = generateOtp();
-
-  await user.update({
-    otp_hash: hashOtp(otp),
-    otp_expires_at: getOtpExpiresAt()
-  });
-
-  await sendOtpEmail(user.email, otp);
-
-  res.json({ message: 'A new OTP has been sent to your email.' });
-});
-
 module.exports = {
   login,
-  register,
-  verifyOtp,
-  resendOtp
+  register
 };

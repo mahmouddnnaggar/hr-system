@@ -10,9 +10,12 @@ The project is split into two applications:
 ## Features
 
 - Email/password authentication with JWT-protected routes.
-- HR and employee registration with email OTP verification.
+- HR and employee registration with admin approval.
 - Admin approval flow for pending HR and employee accounts.
 - Admin management for creating/removing exams and removing users.
+- Audit logs for important user, exam, and assignment actions.
+- Soft delete for users and exams using `deleted_at` and `deleted_by`.
+- Search, filter, and pagination for admin users, exams, and audit logs.
 - HR dashboard for employees, exams, assignments, and results.
 - HR users can assign and unassign exams for employees.
 - Employees can view assigned exams, answer questions, upload image evidence, and finish exams.
@@ -26,7 +29,7 @@ The project is split into two applications:
 | Layer | Technologies |
 | --- | --- |
 | Frontend | React 19, Vite, React Router, TanStack Query, Axios, Tailwind CSS 4, React Hook Form, Zod, Framer Motion, Sonner, Lucide React |
-| Backend | Node.js, Express, Sequelize, MySQL, mysql2, bcrypt, jsonwebtoken, nodemailer, multer, xlsx, dotenv |
+| Backend | Node.js, Express, Sequelize, MySQL, mysql2, bcrypt, jsonwebtoken, multer, xlsx, dotenv |
 | Tooling | npm, ESLint, Vercel frontend rewrites |
 
 ## Project Structure
@@ -81,7 +84,6 @@ DB_PASSWORD=
 DB_NAME=hr_evaluation_system
 JWT_SECRET=change_this_to_a_long_random_secret
 JWT_EXPIRES_IN=1d
-OTP_EXPIRES_MINUTES=10
 ```
 
 Optional variables:
@@ -89,17 +91,9 @@ Optional variables:
 ```env
 DB_PORT=3306
 MYSQL_URL=mysql://user:password@host:3306/database_name
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
 ```
 
 If `MYSQL_URL` is provided, the backend uses it instead of the separate `DB_*` values.
-
-If SMTP variables are empty, the backend prints OTP codes in the backend terminal with a `[DEV OTP]` log. Configure SMTP to send real emails.
 
 ### Frontend
 
@@ -214,13 +208,12 @@ http://localhost:5173
 ## Authentication Flow
 
 1. HR or employee registers with name, email, password, and role.
-2. The backend hashes the password with bcrypt, creates the account with `PENDING` status, generates an OTP, stores the OTP hash, and sends the OTP by email.
-3. The user verifies the OTP. This sets `isEmailVerified` to true and clears the OTP fields.
-4. The account still cannot log in until an approved admin approves it.
-5. Login succeeds only when the email is verified and the account status is `APPROVED`.
-6. JWT tokens protect admin, HR, and employee API routes.
+2. The backend hashes the password with bcrypt and creates the account with `PENDING` status.
+3. The account cannot log in until an approved admin approves it.
+4. Login succeeds only when the account status is `APPROVED`.
+5. JWT tokens protect admin, HR, and employee API routes.
 
-Important message after OTP verification:
+Pending account message:
 
 ```txt
 Your account is waiting for admin approval.
@@ -257,18 +250,18 @@ employee10@test.com / Demo123!
 mahmoudelnaggar@admin.com / Admin123!
 ```
 
-The admin account is seeded with role `ADMIN`, status `APPROVED`, and verified email.
+The admin account is seeded with role `ADMIN` and status `APPROVED`.
 
 ## How To Test Auth
 
 1. Run `npm --prefix backend run seed`.
 2. Start the backend and frontend.
-3. Open `/register`, create an HR or employee account, then check the email inbox or backend terminal for the OTP.
-4. Open `/verify-otp`, enter the OTP, and confirm the pending approval message appears.
-5. Try logging in before approval; the backend returns `Your account is waiting for admin approval.`
-6. Log in as `mahmoudelnaggar@admin.com` with `Admin123!`.
-7. Open `/admin/users`, approve the pending account, then log in with the new account.
-8. Open `/admin/exams` to add an exam with form inputs or upload an Excel file.
+3. Open `/register` and create an HR or employee account.
+4. Try logging in before approval; the backend returns `Your account is waiting for admin approval.`
+5. Log in as `mahmoudelnaggar@admin.com` with `Admin123!`.
+6. Open `/admin/users`, approve the pending account, then log in with the new account.
+7. Open `/admin/exams` to add an exam with form inputs or upload an Excel file.
+8. Open `/admin/audit-logs` to review actions like registration, approval, exam creation, and exam assignment.
 
 Admin Excel upload columns:
 
@@ -280,6 +273,23 @@ question_text
 
 Allowed difficulty values are `EASY`, `MEDIUM`, and `HARD`. The first row supplies the exam title and difficulty, and each row supplies one question.
 
+Admin list pages support pagination and filters. Examples:
+
+```txt
+/api/admin/users?page=1&limit=10&search=ahmed&role=HR&status=APPROVED
+/api/admin/exams?page=1&limit=10&search=quality&difficulty=MEDIUM
+/api/admin/audit-logs?page=1&limit=10&entityType=User&search=approved
+```
+
+Soft delete means records are not physically removed from the database. The app sets:
+
+```txt
+deleted_at
+deleted_by
+```
+
+Normal pages hide removed records. Admin pages can show removed users/exams with `includeDeleted=true`.
+
 ## API Overview
 
 All endpoints are prefixed with `/api`.
@@ -288,9 +298,7 @@ All endpoints are prefixed with `/api`.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `POST` | `/auth/register` | Register an HR or employee account and send OTP. |
-| `POST` | `/auth/verify-otp` | Verify the email OTP. |
-| `POST` | `/auth/resend-otp` | Send a fresh OTP for an unverified account. |
+| `POST` | `/auth/register` | Register an HR or employee account for admin approval. |
 | `POST` | `/auth/login` | Login with email and password. |
 
 ### Admin
@@ -303,11 +311,12 @@ Admin endpoints require a valid approved admin JWT.
 | `GET` | `/admin/users` | List all users. |
 | `PATCH` | `/admin/users/:userId/approve` | Approve a pending user. |
 | `PATCH` | `/admin/users/:userId/reject` | Reject a pending user. |
-| `DELETE` | `/admin/users/:userId` | Remove a user and related records. |
+| `DELETE` | `/admin/users/:userId` | Soft delete a user. |
 | `GET` | `/admin/exams` | List exams. |
 | `POST` | `/admin/exams` | Create an exam from form input. |
 | `POST` | `/admin/exams/upload-excel` | Create an exam from an Excel file. |
-| `DELETE` | `/admin/exams/:examId` | Remove an exam and related records. |
+| `DELETE` | `/admin/exams/:examId` | Soft delete an exam. |
+| `GET` | `/admin/audit-logs` | List audit logs. |
 
 ### HR
 
@@ -391,7 +400,6 @@ final_score = (total_score / max_score) * 5
 | Backend cannot connect to MySQL | Check MySQL is running and verify `backend/.env` credentials. |
 | No demo data appears | Run `npm run seed` inside `backend/`. |
 | Login returns JWT secret error | Add `JWT_SECRET` to `backend/.env` and restart the backend. |
-| OTP email does not arrive locally | Check the backend terminal for the `[DEV OTP]` log or configure SMTP variables. |
 | Uploaded images do not display | Make sure the backend is running and that files exist in `backend/uploads`. |
 | Route refresh fails in production frontend | Confirm the hosting provider rewrites all frontend routes to `index.html`. |
 

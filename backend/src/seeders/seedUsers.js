@@ -27,8 +27,7 @@ const seedUsers = async () => {
   ].map((user) => ({
     ...user,
     password_hash: demoPasswordHash,
-    status: USER_STATUSES.APPROVED,
-    is_email_verified: true
+    status: USER_STATUSES.APPROVED
   }));
 
   users.push({
@@ -36,8 +35,7 @@ const seedUsers = async () => {
     email: ADMIN_EMAIL,
     password_hash: adminPasswordHash,
     role: USER_ROLES.ADMIN,
-    status: USER_STATUSES.APPROVED,
-    is_email_verified: true
+    status: USER_STATUSES.APPROVED
   });
 
   await User.bulkCreate(users);

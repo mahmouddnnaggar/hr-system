@@ -1,8 +1,10 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { Op } = require('sequelize');
-const { sequelize, User, Exam, Question, Assignment, Answer, Result } = require('../../models');
+const { sequelize, User, Exam, Question, AuditLog } = require('../../models');
 const { readExamBuffer } = require('../../services/excelService/excel.service');
+const logAudit = require('../../utils/auditLog');
 const { PUBLIC_USER_ATTRIBUTES, USER_ROLES, USER_STATUSES, sanitizeUser } = require('../../utils/auth');
+const { buildPaginatedResponse, getPagination } = require('../../utils/pagination');
 
 const userOrder = [
   ['status', 'ASC'],
@@ -101,34 +103,71 @@ async function createExamWithQuestions({ title, difficulty, questions, createdBy
   });
 }
 
-async function deleteAssignments(assignmentIds, transaction) {
-  if (!assignmentIds.length) {
-    return;
+function buildUserWhere(query) {
+  const where = {};
+
+  if (query.includeDeleted !== 'true') {
+    where.deleted_at = null;
   }
 
-  await Answer.destroy({ where: { assignment_id: assignmentIds }, transaction });
-  await Result.destroy({ where: { assignment_id: assignmentIds }, transaction });
-  await Assignment.destroy({ where: { id: assignmentIds }, transaction });
+  if (query.role) {
+    where.role = String(query.role).trim().toUpperCase();
+  }
+
+  if (query.status) {
+    where.status = String(query.status).trim().toUpperCase();
+  }
+
+  if (query.search) {
+    const search = `%${String(query.search).trim()}%`;
+    where[Op.or] = [{ name: { [Op.like]: search } }, { email: { [Op.like]: search } }];
+  }
+
+  return where;
 }
 
-async function deleteExamRecords(examId, transaction) {
-  const assignments = await Assignment.findAll({
-    where: { exam_id: examId },
-    attributes: ['id'],
-    transaction
-  });
-  const assignmentIds = assignments.map((assignment) => assignment.id);
+function buildExamWhere(query) {
+  const where = {};
 
-  await deleteAssignments(assignmentIds, transaction);
-  await Question.destroy({ where: { exam_id: examId }, transaction });
-  await Exam.destroy({ where: { id: examId }, transaction });
+  if (query.includeDeleted !== 'true') {
+    where.deleted_at = null;
+  }
+
+  if (query.difficulty) {
+    where.difficulty = String(query.difficulty).trim().toUpperCase();
+  }
+
+  if (query.search) {
+    where.title = { [Op.like]: `%${String(query.search).trim()}%` };
+  }
+
+  return where;
+}
+
+function buildAuditWhere(query) {
+  const where = {};
+
+  if (query.action) {
+    where.action = { [Op.like]: `%${String(query.action).trim()}%` };
+  }
+
+  if (query.entityType) {
+    where.entity_type = String(query.entityType).trim();
+  }
+
+  if (query.search) {
+    where.message = { [Op.like]: `%${String(query.search).trim()}%` };
+  }
+
+  return where;
 }
 
 const getPendingUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
     where: {
       status: USER_STATUSES.PENDING,
-      role: [USER_ROLES.HR, USER_ROLES.EMPLOYEE]
+      role: [USER_ROLES.HR, USER_ROLES.EMPLOYEE],
+      deleted_at: null
     },
     attributes: PUBLIC_USER_ATTRIBUTES,
     order: userOrder
@@ -138,24 +177,53 @@ const getPendingUsers = asyncHandler(async (req, res) => {
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.findAll({
+  const { page, limit, offset } = getPagination(req.query);
+  const { rows, count } = await User.findAndCountAll({
+    where: buildUserWhere(req.query),
     attributes: PUBLIC_USER_ATTRIBUTES,
-    order: userOrder
+    order: userOrder,
+    limit,
+    offset
   });
 
-  res.json(users.map(sanitizeUser));
+  res.json(
+    buildPaginatedResponse({
+      rows: rows.map(sanitizeUser),
+      count,
+      page,
+      limit
+    })
+  );
 });
 
 const getExams = asyncHandler(async (req, res) => {
-  const exams = await Exam.findAll({
+  const { page, limit, offset } = getPagination(req.query);
+  const { rows, count } = await Exam.findAndCountAll({
+    where: buildExamWhere(req.query),
     include: [
       { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'role'] },
       { model: Question, as: 'questions', attributes: ['id', 'question_text'] }
     ],
-    order: [['id', 'ASC']]
+    distinct: true,
+    order: [['id', 'ASC']],
+    limit,
+    offset
   });
 
-  res.json(exams);
+  res.json(buildPaginatedResponse({ rows, count, page, limit }));
+});
+
+const getAuditLogs = asyncHandler(async (req, res) => {
+  const { page, limit, offset } = getPagination(req.query);
+  const { rows, count } = await AuditLog.findAndCountAll({
+    where: buildAuditWhere(req.query),
+    include: [{ model: User, as: 'actor', attributes: ['id', 'name', 'email', 'role'] }],
+    order: [['id', 'DESC']],
+    limit,
+    offset
+  });
+
+  res.json(buildPaginatedResponse({ rows, count, page, limit }));
 });
 
 const createExam = asyncHandler(async (req, res) => {
@@ -173,6 +241,14 @@ const createExam = asyncHandler(async (req, res) => {
     difficulty,
     questions,
     createdBy: req.user.id
+  });
+
+  await logAudit({
+    actorId: req.user.id,
+    action: 'CREATE_EXAM',
+    entityType: 'Exam',
+    entityId: exam.id,
+    message: `Created exam ${exam.title}`
   });
 
   res.status(201).json({
@@ -199,6 +275,14 @@ const uploadExamExcel = asyncHandler(async (req, res) => {
     createdBy: req.user.id
   });
 
+  await logAudit({
+    actorId: req.user.id,
+    action: 'UPLOAD_EXAM_EXCEL',
+    entityType: 'Exam',
+    entityId: exam.id,
+    message: `Uploaded exam ${exam.title} from Excel`
+  });
+
   res.status(201).json({
     message: 'Exam uploaded successfully',
     exam
@@ -212,8 +296,20 @@ const deleteExam = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Exam not found' });
   }
 
+  if (exam.deleted_at) {
+    return res.status(400).json({ message: 'Exam is already removed' });
+  }
+
   await sequelize.transaction(async (transaction) => {
-    await deleteExamRecords(exam.id, transaction);
+    await exam.update({ deleted_at: new Date(), deleted_by: req.user.id }, { transaction });
+    await logAudit({
+      actorId: req.user.id,
+      action: 'DELETE_EXAM',
+      entityType: 'Exam',
+      entityId: exam.id,
+      message: `Soft deleted exam ${exam.title}`,
+      transaction
+    });
   });
 
   res.json({ message: 'Exam removed successfully' });
@@ -231,6 +327,13 @@ const approveUser = asyncHandler(async (req, res) => {
   }
 
   await user.update({ status: USER_STATUSES.APPROVED });
+  await logAudit({
+    actorId: req.user.id,
+    action: 'APPROVE_USER',
+    entityType: 'User',
+    entityId: user.id,
+    message: `Approved user ${user.email}`
+  });
 
   res.json({
     message: 'User approved successfully',
@@ -249,10 +352,13 @@ const rejectUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'Admin accounts cannot be rejected' });
   }
 
-  await user.update({
-    status: USER_STATUSES.REJECTED,
-    otp_hash: null,
-    otp_expires_at: null
+  await user.update({ status: USER_STATUSES.REJECTED });
+  await logAudit({
+    actorId: req.user.id,
+    action: 'REJECT_USER',
+    entityType: 'User',
+    entityId: user.id,
+    message: `Rejected user ${user.email}`
   });
 
   res.json({
@@ -272,28 +378,42 @@ const deleteUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'You cannot remove your own admin account' });
   }
 
+  if (user.deleted_at) {
+    return res.status(400).json({ message: 'User is already removed' });
+  }
+
   await sequelize.transaction(async (transaction) => {
-    const createdExams = await Exam.findAll({
-      where: { created_by: user.id },
-      attributes: ['id'],
-      transaction
-    });
-
-    for (const exam of createdExams) {
-      await deleteExamRecords(exam.id, transaction);
-    }
-
-    const assignments = await Assignment.findAll({
-      where: {
-        [Op.or]: [{ employee_id: user.id }, { assigned_by: user.id }]
+    await user.update(
+      {
+        status: USER_STATUSES.REJECTED,
+        deleted_at: new Date(),
+        deleted_by: req.user.id
       },
-      attributes: ['id'],
+      { transaction }
+    );
+
+    await Exam.update(
+      {
+        deleted_at: new Date(),
+        deleted_by: req.user.id
+      },
+      {
+        where: {
+          created_by: user.id,
+          deleted_at: null
+        },
+        transaction
+      }
+    );
+
+    await logAudit({
+      actorId: req.user.id,
+      action: 'DELETE_USER',
+      entityType: 'User',
+      entityId: user.id,
+      message: `Soft deleted user ${user.email}`,
       transaction
     });
-    const assignmentIds = assignments.map((assignment) => assignment.id);
-
-    await deleteAssignments(assignmentIds, transaction);
-    await user.destroy({ transaction });
   });
 
   res.json({ message: 'User removed successfully' });
@@ -303,6 +423,7 @@ module.exports = {
   getPendingUsers,
   getUsers,
   getExams,
+  getAuditLogs,
   createExam,
   uploadExamExcel,
   deleteExam,

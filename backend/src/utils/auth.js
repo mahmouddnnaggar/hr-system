@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const USER_ROLES = {
@@ -13,7 +12,15 @@ const USER_STATUSES = {
   REJECTED: 'REJECTED'
 };
 
-const PUBLIC_USER_ATTRIBUTES = ['id', 'name', 'email', 'role', 'status', 'is_email_verified'];
+const PUBLIC_USER_ATTRIBUTES = [
+  'id',
+  'name',
+  'email',
+  'role',
+  'status',
+  'deleted_at',
+  'deleted_by'
+];
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -22,23 +29,6 @@ function normalizeEmail(email) {
 function normalizeRole(role) {
   const value = String(role || '').trim().toUpperCase();
   return Object.values(USER_ROLES).includes(value) ? value : null;
-}
-
-function getOtpLifetimeMinutes() {
-  const minutes = Number(process.env.OTP_EXPIRES_MINUTES || 10);
-  return Number.isFinite(minutes) && minutes > 0 ? minutes : 10;
-}
-
-function generateOtp() {
-  return crypto.randomInt(100000, 1000000).toString();
-}
-
-function hashOtp(otp) {
-  return crypto.createHash('sha256').update(String(otp)).digest('hex');
-}
-
-function getOtpExpiresAt() {
-  return new Date(Date.now() + getOtpLifetimeMinutes() * 60 * 1000);
 }
 
 function getJwtSecret() {
@@ -79,7 +69,8 @@ function sanitizeUser(user) {
     email: plainUser.email,
     role: plainUser.role,
     status: plainUser.status,
-    isEmailVerified: Boolean(plainUser.is_email_verified)
+    deletedAt: plainUser.deleted_at || null,
+    deletedBy: plainUser.deleted_by || null
   };
 }
 
@@ -89,9 +80,6 @@ module.exports = {
   PUBLIC_USER_ATTRIBUTES,
   normalizeEmail,
   normalizeRole,
-  generateOtp,
-  hashOtp,
-  getOtpExpiresAt,
   createToken,
   verifyToken,
   sanitizeUser

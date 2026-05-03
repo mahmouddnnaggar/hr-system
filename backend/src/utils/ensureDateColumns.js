@@ -27,19 +27,13 @@ const userStatusMigrationColumn = {
   defaultValue: 'APPROVED'
 };
 
-const userEmailVerifiedMigrationColumn = {
-  type: DataTypes.BOOLEAN,
-  allowNull: false,
-  defaultValue: true
-};
-
-const userOtpHashColumn = {
-  type: DataTypes.STRING,
+const optionalDeletedAtColumn = {
+  type: DataTypes.DATE,
   allowNull: true
 };
 
-const userOtpExpiresAtColumn = {
-  type: DataTypes.DATE,
+const optionalDeletedByColumn = {
+  type: DataTypes.INTEGER,
   allowNull: true
 };
 
@@ -47,7 +41,7 @@ async function describeTable(queryInterface, tableName) {
   try {
     return await queryInterface.describeTable(tableName);
   } catch (error) {
-    if (error.name === 'SequelizeDatabaseError' && /doesn't exist|Unknown table/i.test(error.message)) {
+    if (/doesn't exist|Unknown table|No description found/i.test(error.message)) {
       return null;
     }
 
@@ -99,18 +93,70 @@ async function ensureChangedColumn(queryInterface, tableName, columnName, defini
   await queryInterface.changeColumn(tableName, columnName, definition);
 }
 
+async function dropColumnIfExists(queryInterface, tableName, columnName) {
+  const table = await describeTable(queryInterface, tableName);
+
+  if (!table?.[columnName]) {
+    return;
+  }
+
+  await queryInterface.removeColumn(tableName, columnName);
+}
+
+async function ensureAuditLogsTable(queryInterface) {
+  const table = await describeTable(queryInterface, 'audit_logs');
+
+  if (table) {
+    return;
+  }
+
+  await queryInterface.createTable('audit_logs', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    actor_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    action: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    entity_type: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    entity_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    message: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    created_at: currentTimestampColumn
+  });
+}
+
 async function ensureDateColumns(sequelize) {
   const queryInterface = sequelize.getQueryInterface();
 
+  await ensureAuditLogsTable(queryInterface);
   await ensureColumn(queryInterface, 'assignments', 'assigned_at', currentTimestampColumn);
   await ensureColumn(queryInterface, 'results', 'completed_at', currentTimestampColumn);
   await ensureNullableColumn(queryInterface, 'answers', 'image_url', optionalImageUrlColumn);
   await ensureChangedColumn(queryInterface, 'users', 'role', userRoleColumn);
   await ensureColumn(queryInterface, 'users', 'password_hash', userPasswordHashColumn);
   await ensureColumn(queryInterface, 'users', 'status', userStatusMigrationColumn);
-  await ensureColumn(queryInterface, 'users', 'is_email_verified', userEmailVerifiedMigrationColumn);
-  await ensureColumn(queryInterface, 'users', 'otp_hash', userOtpHashColumn);
-  await ensureColumn(queryInterface, 'users', 'otp_expires_at', userOtpExpiresAtColumn);
+  await dropColumnIfExists(queryInterface, 'users', 'is_email_verified');
+  await dropColumnIfExists(queryInterface, 'users', 'otp_hash');
+  await dropColumnIfExists(queryInterface, 'users', 'otp_expires_at');
+  await ensureColumn(queryInterface, 'users', 'deleted_at', optionalDeletedAtColumn);
+  await ensureColumn(queryInterface, 'users', 'deleted_by', optionalDeletedByColumn);
+  await ensureColumn(queryInterface, 'exams', 'deleted_at', optionalDeletedAtColumn);
+  await ensureColumn(queryInterface, 'exams', 'deleted_by', optionalDeletedByColumn);
 }
 
 module.exports = ensureDateColumns;

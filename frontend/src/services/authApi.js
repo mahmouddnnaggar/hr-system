@@ -7,10 +7,4 @@ export const authApi = {
   register(payload) {
     return api.post("/auth/register", payload);
   },
-  verifyOtp(payload) {
-    return api.post("/auth/verify-otp", payload);
-  },
-  resendOtp(email) {
-    return api.post("/auth/resend-otp", { email });
-  },
 };

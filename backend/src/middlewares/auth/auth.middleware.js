@@ -26,8 +26,8 @@ const authenticate = asyncHandler(async (req, res, next) => {
     return res.status(401).json({ message: 'User account was not found' });
   }
 
-  if (!user.is_email_verified) {
-    return res.status(403).json({ message: 'Please verify your email before logging in.' });
+  if (user.deleted_at) {
+    return res.status(403).json({ message: 'This account has been removed.' });
   }
 
   if (user.status === USER_STATUSES.PENDING) {

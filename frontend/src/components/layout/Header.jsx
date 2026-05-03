@@ -7,6 +7,7 @@ const pageNames = {
   '/admin/dashboard': 'user approvals',
   '/admin/users': 'user approvals',
   '/admin/exams': 'exam library',
+  '/admin/audit-logs': 'audit logs',
   '/hr/dashboard': 'dashboard',
   '/hr/employees': 'employees',
   '/hr/exams': 'exams library',

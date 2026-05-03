@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { getDashboardPath, USER_ROLES } from "../lib/auth";
+import AdminAuditLogs from "../pages/AdminAuditLogs";
 import AdminExams from "../pages/AdminExams";
 import AdminUsers from "../pages/AdminUsers";
 import AssignExam from "../pages/AssignExam";
@@ -18,7 +19,6 @@ import MyExams from "../pages/MyExams";
 import Register from "../pages/Register";
 import ResultDetails from "../pages/ResultDetails";
 import Results from "../pages/Results";
-import VerifyOtp from "../pages/VerifyOtp";
 import ProtectedRoute from "./ProtectedRoute";
 
 function RoleRedirect() {
@@ -32,7 +32,6 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/verify-otp" element={<VerifyOtp />} />
       <Route path="/" element={<RoleRedirect />} />
 
       <Route element={<ProtectedRoute />}>
@@ -41,6 +40,7 @@ export default function AppRoutes() {
             <Route path="/admin/dashboard" element={<Navigate to="/admin/users" replace />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/exams" element={<AdminExams />} />
+            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.HR]} />}>

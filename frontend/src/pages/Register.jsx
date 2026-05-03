@@ -20,10 +20,9 @@ export default function Register() {
       setLoading(true);
       setError("");
       const response = await authApi.register(values);
-      navigate("/verify-otp", {
+      navigate("/login", {
         replace: true,
         state: {
-          email: response.email || values.email,
           message: response.message,
         },
       });
@@ -42,7 +41,7 @@ export default function Register() {
             <Award className="h-7 w-7" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">HR and employee accounts need email verification and admin approval.</p>
+          <p className="mt-2 text-sm font-medium text-slate-500">HR and employee accounts need admin approval before login.</p>
         </div>
 
         <div className="px-8 pb-8">

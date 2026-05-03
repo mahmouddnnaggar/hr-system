@@ -7,9 +7,12 @@ For the complete full-stack setup guide, see the root `README.md`.
 ## Features
 
 - Email/password login with bcrypt password hashes and JWT tokens.
-- HR and employee registration with email OTP verification.
+- HR and employee registration with admin approval.
 - Admin approval and rejection for pending HR/employee accounts.
 - Admin exam creation/removal and user removal.
+- Audit logs for important backend actions.
+- Soft delete for users and exams.
+- Pagination, search, and filters on admin lists.
 - Seeded admin, HR, and employee accounts.
 - Excel-based exam imports from `src/data/exams`.
 - HR assignment and results endpoints.
@@ -26,7 +29,6 @@ For the complete full-stack setup guide, see the root `README.md`.
 - mysql2
 - bcrypt
 - jsonwebtoken
-- nodemailer
 - dotenv
 - cors
 - multer
@@ -45,7 +47,6 @@ DB_PASSWORD=
 DB_NAME=hr_evaluation_system
 JWT_SECRET=change_this_to_a_long_random_secret
 JWT_EXPIRES_IN=1d
-OTP_EXPIRES_MINUTES=10
 ```
 
 Optional:
@@ -53,17 +54,9 @@ Optional:
 ```env
 DB_PORT=3306
 MYSQL_URL=mysql://user:password@host:3306/database_name
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
 ```
 
 If `MYSQL_URL` is set, it takes priority over the separate `DB_*` variables.
-
-If SMTP is not configured, OTP codes are printed in the backend terminal as `[DEV OTP] email: code`.
 
 ## Setup
 
@@ -136,11 +129,9 @@ uploads/           Local uploaded images
 ## Auth Flow
 
 1. HR or employee registers with `name`, `email`, `password`, and `role`.
-2. The backend creates the user as `PENDING` and `is_email_verified: false`.
-3. An OTP is generated, hashed, stored with an expiry time, and sent by email.
-4. `POST /api/auth/verify-otp` verifies the OTP, clears it, and marks email as verified.
-5. The user still cannot log in until an admin approves the account.
-6. Login returns a JWT only for approved, verified users.
+2. The backend creates the user as `PENDING`.
+3. The user cannot log in until an admin approves the account.
+4. Login returns a JWT only for approved users.
 
 Pending login response:
 
@@ -187,9 +178,7 @@ All endpoints are prefixed with `/api`.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `POST` | `/auth/register` | Register an HR or employee and send OTP. |
-| `POST` | `/auth/verify-otp` | Verify the OTP and mark email as verified. |
-| `POST` | `/auth/resend-otp` | Send a new OTP for an unverified account. |
+| `POST` | `/auth/register` | Register an HR or employee for admin approval. |
 | `POST` | `/auth/login` | Login with email and password. |
 
 ### Admin
@@ -202,11 +191,41 @@ Requires an approved admin JWT.
 | `GET` | `/admin/users` | List all users. |
 | `PATCH` | `/admin/users/:userId/approve` | Approve a user. |
 | `PATCH` | `/admin/users/:userId/reject` | Reject a user. |
-| `DELETE` | `/admin/users/:userId` | Remove a user and related records. |
+| `DELETE` | `/admin/users/:userId` | Soft delete a user. |
 | `GET` | `/admin/exams` | List exams. |
 | `POST` | `/admin/exams` | Create an exam from form input. |
 | `POST` | `/admin/exams/upload-excel` | Create an exam from an Excel file. |
-| `DELETE` | `/admin/exams/:examId` | Remove an exam and related records. |
+| `DELETE` | `/admin/exams/:examId` | Soft delete an exam. |
+| `GET` | `/admin/audit-logs` | List audit logs. |
+
+Admin list query params:
+
+```txt
+page=1
+limit=10
+search=value
+includeDeleted=true
+```
+
+User filters:
+
+```txt
+role=ADMIN|HR|EMPLOYEE
+status=PENDING|APPROVED|REJECTED
+```
+
+Exam filters:
+
+```txt
+difficulty=EASY|MEDIUM|HARD
+```
+
+Audit log filters:
+
+```txt
+entityType=User|Exam|Assignment
+action=CREATE_EXAM
+```
 
 ### HR
 
@@ -266,20 +285,6 @@ Content-Type: application/json
 }
 ```
 
-Verify OTP:
-
-```http
-POST /api/auth/verify-otp
-Content-Type: application/json
-```
-
-```json
-{
-  "email": "new.employee@test.com",
-  "otp": "123456"
-}
-```
-
 Create exam from form input:
 
 ```http
@@ -320,6 +325,29 @@ question_text
 ```
 
 Allowed difficulty values are `EASY`, `MEDIUM`, and `HARD`.
+
+List users with pagination:
+
+```http
+GET /api/admin/users?page=1&limit=10&search=ahmed&role=HR
+Authorization: Bearer your_admin_token
+```
+
+List audit logs:
+
+```http
+GET /api/admin/audit-logs?page=1&limit=10&entityType=User
+Authorization: Bearer your_admin_token
+```
+
+Soft delete:
+
+```txt
+DELETE /api/admin/users/:userId
+DELETE /api/admin/exams/:examId
+```
+
+These routes set `deleted_at` and `deleted_by` instead of physically deleting the record.
 
 Assign exam:
 
@@ -384,5 +412,4 @@ final_score = (total_score / max_score) * 5
 - Uploaded images are stored in `uploads/`.
 - MySQL stores image paths, not binary image data.
 - Set a strong `JWT_SECRET` in production.
-- Configure SMTP in production so OTP messages are sent by email instead of logged to the terminal.
-- For production, move evidence uploads to persistent object storage and consider rate limiting for login and OTP routes.
+- For production, move evidence uploads to persistent object storage and consider rate limiting for login and registration routes.

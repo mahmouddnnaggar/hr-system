@@ -1,4 +1,4 @@
-import { Award, ClipboardList, FileText, History, LayoutDashboard, LogOut, ShieldCheck, Users, X } from "lucide-react";
+import { Award, ClipboardList, FileText, History, LayoutDashboard, LogOut, ScrollText, ShieldCheck, Users, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import Button from "../common/Button";
 import { getInitials, cn } from "../../lib/utils";
@@ -15,6 +15,7 @@ const hrMenu = [
 const adminMenu = [
   { to: "/admin/users", label: "User Approvals", icon: ShieldCheck },
   { to: "/admin/exams", label: "Exam Library", icon: ClipboardList },
+  { to: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
 ];
 
 const employeeMenu = [

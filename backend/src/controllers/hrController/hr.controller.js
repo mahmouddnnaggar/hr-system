@@ -1,5 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sequelize, User, Exam, Question, Assignment, Answer, Result } = require('../../models');
+const logAudit = require('../../utils/auditLog');
 const { USER_ROLES, USER_STATUSES } = require('../../utils/auth');
 
 const getEmployees = asyncHandler(async (req, res) => {
@@ -7,9 +8,9 @@ const getEmployees = asyncHandler(async (req, res) => {
     where: {
       role: USER_ROLES.EMPLOYEE,
       status: USER_STATUSES.APPROVED,
-      is_email_verified: true
+      deleted_at: null
     },
-    attributes: ['id', 'name', 'email', 'role', 'status', 'is_email_verified'],
+    attributes: ['id', 'name', 'email', 'role', 'status'],
     order: [['id', 'ASC']]
   });
 
@@ -18,6 +19,7 @@ const getEmployees = asyncHandler(async (req, res) => {
 
 const getExams = asyncHandler(async (req, res) => {
   const exams = await Exam.findAll({
+    where: { deleted_at: null },
     include: [
       { model: User, as: 'creator', attributes: ['id', 'name', 'email'] },
       { model: Question, as: 'questions', attributes: ['id', 'question_text'] }
@@ -40,13 +42,13 @@ const assignExam = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'You can only assign exams as yourself' });
   }
 
-  const exam = await Exam.findByPk(exam_id);
+  const exam = await Exam.findOne({ where: { id: exam_id, deleted_at: null } });
   const employee = await User.findOne({
     where: {
       id: employee_id,
       role: USER_ROLES.EMPLOYEE,
       status: USER_STATUSES.APPROVED,
-      is_email_verified: true
+      deleted_at: null
     }
   });
 
@@ -64,6 +66,14 @@ const assignExam = asyncHandler(async (req, res) => {
     assigned_by: assignedBy,
     assigned_at: new Date(),
     status: 'PENDING'
+  });
+
+  await logAudit({
+    actorId: req.user.id,
+    action: 'ASSIGN_EXAM',
+    entityType: 'Assignment',
+    entityId: assignment.id,
+    message: `Assigned exam ${exam.title} to ${employee.email}`
   });
 
   res.status(201).json({
@@ -117,6 +127,14 @@ const unassignExam = asyncHandler(async (req, res) => {
   await sequelize.transaction(async (transaction) => {
     await Answer.destroy({ where: { assignment_id: assignment.id }, transaction });
     await assignment.destroy({ transaction });
+    await logAudit({
+      actorId: req.user.id,
+      action: 'UNASSIGN_EXAM',
+      entityType: 'Assignment',
+      entityId: assignment.id,
+      message: `Unassigned exam assignment ${assignment.id}`,
+      transaction
+    });
   });
 
   res.json({ message: 'Exam unassigned successfully' });

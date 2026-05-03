@@ -22,10 +22,6 @@ export default function ProtectedRoute({ allowedRoles }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (currentUser.isEmailVerified === false) {
-    return <Navigate to="/login" replace />;
-  }
-
   if (allowedRoles?.length && !allowedRoles.includes(currentUser.role)) {
     return <Navigate to={getDashboardPath(currentUser)} replace />;
   }

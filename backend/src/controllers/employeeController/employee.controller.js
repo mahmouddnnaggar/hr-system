@@ -1,5 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sequelize, User, Exam, Question, Assignment, Answer, Result } = require('../../models');
+const logAudit = require('../../utils/auditLog');
 const { calculateAnswerScore, calculateFinalScore, scoreMap } = require('../../utils/calculateScore');
 
 const getEmployeeExams = asyncHandler(async (req, res) => {
@@ -8,7 +9,7 @@ const getEmployeeExams = asyncHandler(async (req, res) => {
   const assignments = await Assignment.findAll({
     where: { employee_id: employeeId },
     include: [
-      { model: Exam, as: 'exam', attributes: ['id', 'title', 'difficulty', 'questions_count'] },
+      { model: Exam, as: 'exam', where: { deleted_at: null }, attributes: ['id', 'title', 'difficulty', 'questions_count'] },
       { model: User, as: 'assignedBy', attributes: ['id', 'name', 'email'] }
     ],
     order: [['id', 'DESC']]
@@ -40,6 +41,10 @@ const startAssignment = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'You can only access your own assignments' });
   }
 
+  if (assignment.exam?.deleted_at) {
+    return res.status(404).json({ message: 'This exam is no longer available' });
+  }
+
   res.json(assignment);
 });
 
@@ -64,6 +69,10 @@ const submitAnswer = asyncHandler(async (req, res) => {
 
   if (Number(assignment.employee_id) !== Number(req.user.id)) {
     return res.status(403).json({ message: 'You can only submit answers for your own assignments' });
+  }
+
+  if (assignment.exam?.deleted_at) {
+    return res.status(404).json({ message: 'This exam is no longer available' });
   }
 
   if (assignment.status === 'COMPLETED') {
@@ -138,6 +147,10 @@ const finishExam = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'You can only finish your own assignments' });
   }
 
+  if (assignment.exam?.deleted_at) {
+    return res.status(404).json({ message: 'This exam is no longer available' });
+  }
+
   if (assignment.result) {
     return res.status(400).json({ message: 'Result already exists for this assignment' });
   }
@@ -166,6 +179,14 @@ const finishExam = asyncHandler(async (req, res) => {
     );
 
     await assignment.update({ status: 'COMPLETED' }, { transaction });
+    await logAudit({
+      actorId: req.user.id,
+      action: 'FINISH_EXAM',
+      entityType: 'Assignment',
+      entityId: assignment.id,
+      message: `Finished exam assignment ${assignment.id}`,
+      transaction
+    });
 
     return createdResult;
   });
