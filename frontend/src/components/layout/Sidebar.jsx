@@ -39,7 +39,7 @@ export default function Sidebar({ open, onClose }) {
       />
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:w-64 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-transform lg:w-64 lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -55,7 +55,7 @@ export default function Sidebar({ open, onClose }) {
           </Button>
         </div>
 
-        <nav className="flex-grow space-y-1 px-4">
+        <nav className="min-h-0 flex-grow space-y-1 overflow-y-auto px-4">
           {menu.map((item) => (
             <NavLink
               key={item.to}
