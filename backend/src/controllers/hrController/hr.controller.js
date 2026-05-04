@@ -1,5 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sequelize, User, Exam, Question, Assignment, Answer, Result } = require('../../models');
+const { sendExamAssignedEmail } = require('../../services/emailService/email.service');
 const logAudit = require('../../utils/auditLog');
 const { USER_ROLES, USER_STATUSES } = require('../../utils/auth');
 
@@ -75,6 +76,7 @@ const assignExam = asyncHandler(async (req, res) => {
     entityId: assignment.id,
     message: `Assigned exam ${exam.title} to ${employee.email}`
   });
+  await sendExamAssignedEmail(employee, exam);
 
   res.status(201).json({
     message: 'Exam assigned successfully',

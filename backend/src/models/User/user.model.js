@@ -38,6 +38,18 @@ const User = sequelize.define(
     deleted_by: {
       type: DataTypes.INTEGER,
       allowNull: true
+    },
+    refresh_token_hash: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    reset_otp_hash: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    reset_otp_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   },
   {

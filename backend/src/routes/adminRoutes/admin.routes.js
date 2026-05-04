@@ -18,5 +18,9 @@ router.post('/exams', adminController.createExam);
 router.post('/exams/upload-excel', excelUpload.single('file'), adminController.uploadExamExcel);
 router.delete('/exams/:examId', adminController.deleteExam);
 router.get('/audit-logs', adminController.getAuditLogs);
+router.get('/analytics', adminController.getAnalytics);
+router.get('/reports/users', adminController.exportUsers);
+router.get('/reports/exams', adminController.exportExams);
+router.get('/reports/results', adminController.exportResults);
 
 module.exports = router;

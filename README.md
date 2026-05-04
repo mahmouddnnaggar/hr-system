@@ -10,12 +10,16 @@ The project is split into two applications:
 ## Features
 
 - Email/password authentication with JWT-protected routes.
+- Refresh tokens with automatic frontend token refresh.
+- Forgot password flow with email reset code.
+- Email notifications with SMTP support and console fallback in development.
 - HR and employee registration with admin approval.
 - Admin approval flow for pending HR and employee accounts.
 - Admin management for creating/removing exams and removing users.
 - Audit logs for important user, exam, and assignment actions.
 - Soft delete for users and exams using `deleted_at` and `deleted_by`.
 - Search, filter, and pagination for admin users, exams, and audit logs.
+- Admin dashboard analytics and CSV report export.
 - HR dashboard for employees, exams, assignments, and results.
 - HR users can assign and unassign exams for employees.
 - Employees can view assigned exams, answer questions, upload image evidence, and finish exams.
@@ -29,8 +33,8 @@ The project is split into two applications:
 | Layer | Technologies |
 | --- | --- |
 | Frontend | React 19, Vite, React Router, TanStack Query, Axios, Tailwind CSS 4, React Hook Form, Zod, Framer Motion, Sonner, Lucide React |
-| Backend | Node.js, Express, Sequelize, MySQL, mysql2, bcrypt, jsonwebtoken, multer, xlsx, dotenv |
-| Tooling | npm, ESLint, Vercel frontend rewrites |
+| Backend | Node.js, Express, Sequelize, MySQL, mysql2, bcrypt, jsonwebtoken, nodemailer, multer, xlsx, dotenv |
+| Tooling | npm, ESLint, Jest, Supertest, Docker, Vercel frontend rewrites |
 
 ## Project Structure
 
@@ -83,7 +87,10 @@ DB_USER=root
 DB_PASSWORD=
 DB_NAME=hr_evaluation_system
 JWT_SECRET=change_this_to_a_long_random_secret
-JWT_EXPIRES_IN=1d
+JWT_EXPIRES_IN=15m
+REFRESH_TOKEN_SECRET=change_this_refresh_secret
+REFRESH_TOKEN_EXPIRES_IN=7d
+RESET_OTP_EXPIRES_MINUTES=10
 ```
 
 Optional variables:
@@ -94,9 +101,17 @@ MYSQL_URL=mysql://user:password@host:3306/database_name
 ADMIN_NAME=Default Admin
 ADMIN_EMAIL=mahmoudelnaggar@admin.com
 ADMIN_PASSWORD=Admin123!
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
 ```
 
 If `MYSQL_URL` is provided, the backend uses it instead of the separate `DB_*` values.
+
+If SMTP is empty, emails are printed in the backend terminal with `[DEV EMAIL]`.
 
 ### Frontend
 
@@ -199,6 +214,7 @@ http://localhost:5173
 | `npm start` | Start the API with Node. |
 | `npm run seed` | Reset and seed the MySQL database. |
 | `npm run seed:admin` | Create or update one approved admin account without resetting data. |
+| `npm test` | Run backend Jest/Supertest tests. |
 
 ### Frontend
 
@@ -215,7 +231,16 @@ http://localhost:5173
 2. The backend hashes the password with bcrypt and creates the account with `PENDING` status.
 3. The account cannot log in until an approved admin approves it.
 4. Login succeeds only when the account status is `APPROVED`.
-5. JWT tokens protect admin, HR, and employee API routes.
+5. Login returns an access token and refresh token.
+6. The frontend automatically asks for a new access token when the old one expires.
+7. JWT tokens protect admin, HR, and employee API routes.
+
+Forgot password flow:
+
+1. User opens `/forgot-password`.
+2. Backend sends a reset code by email or logs it in development.
+3. User enters the code and a new password.
+4. Backend hashes the new password and clears old refresh tokens.
 
 Pending account message:
 
@@ -266,6 +291,8 @@ The admin account is seeded with role `ADMIN` and status `APPROVED`.
 6. Open `/admin/users`, approve the pending account, then log in with the new account.
 7. Open `/admin/exams` to add an exam with form inputs or upload an Excel file.
 8. Open `/admin/audit-logs` to review actions like registration, approval, exam creation, and exam assignment.
+9. Open `/admin/dashboard` to view analytics.
+10. Open `/admin/reports` to export CSV reports.
 
 Admin Excel upload columns:
 
@@ -304,6 +331,10 @@ All endpoints are prefixed with `/api`.
 | --- | --- | --- |
 | `POST` | `/auth/register` | Register an HR or employee account for admin approval. |
 | `POST` | `/auth/login` | Login with email and password. |
+| `POST` | `/auth/forgot-password` | Send a password reset code. |
+| `POST` | `/auth/reset-password` | Reset password using the code. |
+| `POST` | `/auth/refresh-token` | Get a new access token. |
+| `POST` | `/auth/logout` | Clear a refresh token. |
 
 ### Admin
 
@@ -321,6 +352,25 @@ Admin endpoints require a valid approved admin JWT.
 | `POST` | `/admin/exams/upload-excel` | Create an exam from an Excel file. |
 | `DELETE` | `/admin/exams/:examId` | Soft delete an exam. |
 | `GET` | `/admin/audit-logs` | List audit logs. |
+| `GET` | `/admin/analytics` | Get dashboard analytics. |
+| `GET` | `/admin/reports/users` | Export users CSV. |
+| `GET` | `/admin/reports/exams` | Export exams CSV. |
+| `GET` | `/admin/reports/results` | Export results CSV. |
+
+## Docker
+
+Run the full stack with MySQL:
+
+```bash
+docker compose up --build
+```
+
+URLs:
+
+```txt
+Frontend: http://localhost:5173
+Backend: http://localhost:3000
+```
 
 ### HR
 

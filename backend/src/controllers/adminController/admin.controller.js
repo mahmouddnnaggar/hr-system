@@ -1,7 +1,8 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { Op } = require('sequelize');
-const { sequelize, User, Exam, Question, AuditLog } = require('../../models');
+const { sequelize, User, Exam, Question, Assignment, Result, AuditLog } = require('../../models');
 const { readExamBuffer } = require('../../services/excelService/excel.service');
+const { sendAccountStatusEmail } = require('../../services/emailService/email.service');
 const logAudit = require('../../utils/auditLog');
 const { PUBLIC_USER_ATTRIBUTES, USER_ROLES, USER_STATUSES, sanitizeUser } = require('../../utils/auth');
 const { buildPaginatedResponse, getPagination } = require('../../utils/pagination');
@@ -162,6 +163,22 @@ function buildAuditWhere(query) {
   return where;
 }
 
+function csvEscape(value) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function sendCsv(res, filename, headers, rows) {
+  const lines = [
+    headers.map(csvEscape).join(','),
+    ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(','))
+  ];
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(lines.join('\n'));
+}
+
 const getPendingUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
     where: {
@@ -224,6 +241,132 @@ const getAuditLogs = asyncHandler(async (req, res) => {
   });
 
   res.json(buildPaginatedResponse({ rows, count, page, limit }));
+});
+
+const getAnalytics = asyncHandler(async (req, res) => {
+  const [
+    totalUsers,
+    pendingUsers,
+    approvedUsers,
+    removedUsers,
+    totalExams,
+    removedExams,
+    totalAssignments,
+    completedAssignments,
+    totalResults,
+    auditLogs
+  ] = await Promise.all([
+    User.count({ where: { deleted_at: null } }),
+    User.count({ where: { status: USER_STATUSES.PENDING, deleted_at: null } }),
+    User.count({ where: { status: USER_STATUSES.APPROVED, deleted_at: null } }),
+    User.count({ where: { deleted_at: { [Op.ne]: null } } }),
+    Exam.count({ where: { deleted_at: null } }),
+    Exam.count({ where: { deleted_at: { [Op.ne]: null } } }),
+    Assignment.count(),
+    Assignment.count({ where: { status: 'COMPLETED' } }),
+    Result.count(),
+    AuditLog.count()
+  ]);
+
+  const averageResult = await Result.findOne({
+    attributes: [[sequelize.fn('AVG', sequelize.col('final_score')), 'averageScore']],
+    raw: true
+  });
+
+  res.json({
+    users: {
+      total: totalUsers,
+      pending: pendingUsers,
+      approved: approvedUsers,
+      removed: removedUsers
+    },
+    exams: {
+      total: totalExams,
+      removed: removedExams
+    },
+    assignments: {
+      total: totalAssignments,
+      completed: completedAssignments
+    },
+    results: {
+      total: totalResults,
+      averageScore: Number(averageResult?.averageScore || 0)
+    },
+    auditLogs
+  });
+});
+
+const exportUsers = asyncHandler(async (req, res) => {
+  const users = await User.findAll({
+    attributes: PUBLIC_USER_ATTRIBUTES,
+    order: userOrder
+  });
+
+  sendCsv(
+    res,
+    'users-report.csv',
+    ['id', 'name', 'email', 'role', 'status', 'deletedAt'],
+    users.map((user) => {
+      const publicUser = sanitizeUser(user);
+      return {
+        ...publicUser,
+        deletedAt: publicUser.deletedAt || ''
+      };
+    })
+  );
+});
+
+const exportExams = asyncHandler(async (req, res) => {
+  const exams = await Exam.findAll({
+    include: [{ model: User, as: 'creator', attributes: ['name', 'email'] }],
+    order: [['id', 'ASC']]
+  });
+
+  sendCsv(
+    res,
+    'exams-report.csv',
+    ['id', 'title', 'difficulty', 'questions_count', 'creator', 'deleted_at'],
+    exams.map((exam) => ({
+      id: exam.id,
+      title: exam.title,
+      difficulty: exam.difficulty,
+      questions_count: exam.questions_count,
+      creator: exam.creator?.email || '',
+      deleted_at: exam.deleted_at || ''
+    }))
+  );
+});
+
+const exportResults = asyncHandler(async (req, res) => {
+  const results = await Result.findAll({
+    include: [
+      {
+        model: Assignment,
+        as: 'assignment',
+        include: [
+          { model: Exam, as: 'exam', attributes: ['title', 'difficulty'] },
+          { model: User, as: 'employee', attributes: ['name', 'email'] },
+          { model: User, as: 'assignedBy', attributes: ['name', 'email'] }
+        ]
+      }
+    ],
+    order: [['id', 'DESC']]
+  });
+
+  sendCsv(
+    res,
+    'results-report.csv',
+    ['id', 'exam', 'employee', 'assigned_by', 'total_score', 'final_score', 'completed_at'],
+    results.map((result) => ({
+      id: result.id,
+      exam: result.assignment?.exam?.title || '',
+      employee: result.assignment?.employee?.email || '',
+      assigned_by: result.assignment?.assignedBy?.email || '',
+      total_score: result.total_score,
+      final_score: result.final_score,
+      completed_at: result.completed_at || ''
+    }))
+  );
 });
 
 const createExam = asyncHandler(async (req, res) => {
@@ -334,6 +477,7 @@ const approveUser = asyncHandler(async (req, res) => {
     entityId: user.id,
     message: `Approved user ${user.email}`
   });
+  await sendAccountStatusEmail(user, USER_STATUSES.APPROVED);
 
   res.json({
     message: 'User approved successfully',
@@ -360,6 +504,7 @@ const rejectUser = asyncHandler(async (req, res) => {
     entityId: user.id,
     message: `Rejected user ${user.email}`
   });
+  await sendAccountStatusEmail(user, USER_STATUSES.REJECTED);
 
   res.json({
     message: 'User rejected successfully',
@@ -424,6 +569,10 @@ module.exports = {
   getUsers,
   getExams,
   getAuditLogs,
+  getAnalytics,
+  exportUsers,
+  exportExams,
+  exportResults,
   createExam,
   uploadExamExcel,
   deleteExam,

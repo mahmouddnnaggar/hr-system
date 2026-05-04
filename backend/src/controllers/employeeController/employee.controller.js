@@ -1,5 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sequelize, User, Exam, Question, Assignment, Answer, Result } = require('../../models');
+const { sendExamCompletedEmail } = require('../../services/emailService/email.service');
 const logAudit = require('../../utils/auditLog');
 const { calculateAnswerScore, calculateFinalScore, scoreMap } = require('../../utils/calculateScore');
 
@@ -190,6 +191,8 @@ const finishExam = asyncHandler(async (req, res) => {
 
     return createdResult;
   });
+
+  await sendExamCompletedEmail(req.user, assignment.exam.title);
 
   res.status(201).json({
     message: 'Exam finished successfully',

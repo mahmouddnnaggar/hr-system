@@ -7,12 +7,17 @@ For the complete full-stack setup guide, see the root `README.md`.
 ## Features
 
 - Email/password login with bcrypt password hashes and JWT tokens.
+- Refresh tokens.
+- Forgot password with reset code email.
+- Email notifications with SMTP support and console fallback.
 - HR and employee registration with admin approval.
 - Admin approval and rejection for pending HR/employee accounts.
 - Admin exam creation/removal and user removal.
 - Audit logs for important backend actions.
 - Soft delete for users and exams.
 - Pagination, search, and filters on admin lists.
+- CSV report exports and admin analytics.
+- Jest/Supertest backend tests.
 - Seeded admin, HR, and employee accounts.
 - Excel-based exam imports from `src/data/exams`.
 - HR assignment and results endpoints.
@@ -29,6 +34,7 @@ For the complete full-stack setup guide, see the root `README.md`.
 - mysql2
 - bcrypt
 - jsonwebtoken
+- nodemailer
 - dotenv
 - cors
 - multer
@@ -46,7 +52,10 @@ DB_USER=root
 DB_PASSWORD=
 DB_NAME=hr_evaluation_system
 JWT_SECRET=change_this_to_a_long_random_secret
-JWT_EXPIRES_IN=1d
+JWT_EXPIRES_IN=15m
+REFRESH_TOKEN_SECRET=change_this_refresh_secret
+REFRESH_TOKEN_EXPIRES_IN=7d
+RESET_OTP_EXPIRES_MINUTES=10
 ```
 
 Optional:
@@ -57,9 +66,16 @@ MYSQL_URL=mysql://user:password@host:3306/database_name
 ADMIN_NAME=Default Admin
 ADMIN_EMAIL=mahmoudelnaggar@admin.com
 ADMIN_PASSWORD=Admin123!
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
 ```
 
 If `MYSQL_URL` is set, it takes priority over the separate `DB_*` variables.
+If SMTP is empty, emails are printed in the backend terminal with `[DEV EMAIL]`.
 
 ## Setup
 
@@ -113,6 +129,7 @@ http://localhost:3000/api
 | `npm start` | Start the API with Node. |
 | `npm run seed` | Reset and seed the database. |
 | `npm run seed:admin` | Create or update one approved admin account without resetting data. |
+| `npm test` | Run backend tests. |
 
 ## Project Structure
 
@@ -135,7 +152,10 @@ uploads/           Local uploaded images
 1. HR or employee registers with `name`, `email`, `password`, and `role`.
 2. The backend creates the user as `PENDING`.
 3. The user cannot log in until an admin approves the account.
-4. Login returns a JWT only for approved users.
+4. Login returns an access token and refresh token only for approved users.
+5. The refresh token can request a new access token from `/api/auth/refresh-token`.
+
+Forgot password uses `/api/auth/forgot-password` and `/api/auth/reset-password`.
 
 Pending login response:
 
@@ -184,6 +204,10 @@ All endpoints are prefixed with `/api`.
 | --- | --- | --- |
 | `POST` | `/auth/register` | Register an HR or employee for admin approval. |
 | `POST` | `/auth/login` | Login with email and password. |
+| `POST` | `/auth/forgot-password` | Send password reset code. |
+| `POST` | `/auth/reset-password` | Reset password using the code. |
+| `POST` | `/auth/refresh-token` | Issue a new access token. |
+| `POST` | `/auth/logout` | Clear a refresh token. |
 
 ### Admin
 
@@ -201,6 +225,10 @@ Requires an approved admin JWT.
 | `POST` | `/admin/exams/upload-excel` | Create an exam from an Excel file. |
 | `DELETE` | `/admin/exams/:examId` | Soft delete an exam. |
 | `GET` | `/admin/audit-logs` | List audit logs. |
+| `GET` | `/admin/analytics` | Dashboard analytics. |
+| `GET` | `/admin/reports/users` | Export users CSV. |
+| `GET` | `/admin/reports/exams` | Export exams CSV. |
+| `GET` | `/admin/reports/results` | Export results CSV. |
 
 Admin list query params:
 
@@ -344,6 +372,48 @@ GET /api/admin/audit-logs?page=1&limit=10&entityType=User
 Authorization: Bearer your_admin_token
 ```
 
+Forgot password:
+
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "hr1@test.com"
+}
+```
+
+Reset password:
+
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "hr1@test.com",
+  "otp": "123456",
+  "password": "NewPass123"
+}
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
+## Docker
+
+From the project root:
+
+```bash
+docker compose up --build
+```
+
 Soft delete:
 
 ```txt
@@ -416,4 +486,6 @@ final_score = (total_score / max_score) * 5
 - Uploaded images are stored in `uploads/`.
 - MySQL stores image paths, not binary image data.
 - Set a strong `JWT_SECRET` in production.
+- Set a strong `REFRESH_TOKEN_SECRET` in production.
+- Configure SMTP in production.
 - For production, move evidence uploads to persistent object storage and consider rate limiting for login and registration routes.

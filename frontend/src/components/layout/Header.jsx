@@ -4,10 +4,11 @@ import Button from '../common/Button';
 import { useAuth } from '../../context/AuthContext';
 
 const pageNames = {
-  '/admin/dashboard': 'user approvals',
+  '/admin/dashboard': 'admin dashboard',
   '/admin/users': 'user approvals',
   '/admin/exams': 'exam library',
   '/admin/audit-logs': 'audit logs',
+  '/admin/reports': 'reports',
   '/hr/dashboard': 'dashboard',
   '/hr/employees': 'employees',
   '/hr/exams': 'exams library',

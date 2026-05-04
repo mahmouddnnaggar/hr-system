@@ -13,9 +13,11 @@ const hrMenu = [
 ];
 
 const adminMenu = [
+  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/users", label: "User Approvals", icon: ShieldCheck },
   { to: "/admin/exams", label: "Exam Library", icon: ClipboardList },
   { to: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
+  { to: "/admin/reports", label: "Reports", icon: FileText },
 ];
 
 const employeeMenu = [

@@ -3,7 +3,9 @@ import AppLayout from "../components/layout/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { getDashboardPath, USER_ROLES } from "../lib/auth";
 import AdminAuditLogs from "../pages/AdminAuditLogs";
+import AdminDashboard from "../pages/AdminDashboard";
 import AdminExams from "../pages/AdminExams";
+import AdminReports from "../pages/AdminReports";
 import AdminUsers from "../pages/AdminUsers";
 import AssignExam from "../pages/AssignExam";
 import Assignments from "../pages/Assignments";
@@ -14,6 +16,7 @@ import ExamIntro from "../pages/ExamIntro";
 import ExamSlides from "../pages/ExamSlides";
 import Exams from "../pages/Exams";
 import HRDashboard from "../pages/HRDashboard";
+import ForgotPassword from "../pages/ForgotPassword";
 import Login from "../pages/Login";
 import MyExams from "../pages/MyExams";
 import Register from "../pages/Register";
@@ -31,16 +34,18 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/register" element={<Register />} />
       <Route path="/" element={<RoleRedirect />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]} />}>
-            <Route path="/admin/dashboard" element={<Navigate to="/admin/users" replace />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/exams" element={<AdminExams />} />
             <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+            <Route path="/admin/reports" element={<AdminReports />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={[USER_ROLES.HR]} />}>

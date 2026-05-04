@@ -71,6 +71,12 @@ export default function LoginForm({ onSubmit, error, loading }) {
         </Button>
 
         <p className="text-center text-xs font-medium text-slate-500">
+          <Link to="/forgot-password" className="font-bold text-blue-600 hover:underline">
+            Forgot password?
+          </Link>
+        </p>
+
+        <p className="text-center text-xs font-medium text-slate-500">
           New to EvalSystem?{" "}
           <Link to="/register" className="font-bold text-blue-600 hover:underline">
             Create an account

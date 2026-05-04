@@ -2,14 +2,34 @@ const asyncHandler = require('../../utils/asyncHandler');
 const { User } = require('../../models');
 const bcrypt = require('bcrypt');
 const logAudit = require('../../utils/auditLog');
+const { sendEmail, sendPasswordResetEmail } = require('../../services/emailService/email.service');
 const {
   USER_ROLES,
   USER_STATUSES,
   createToken,
+  createRefreshToken,
+  generateOtp,
+  getResetOtpExpiresAt,
+  hashValue,
   normalizeEmail,
   normalizeRole,
-  sanitizeUser
+  sanitizeUser,
+  verifyRefreshToken
 } = require('../../utils/auth');
+
+async function buildAuthResponse(user) {
+  const token = createToken(user);
+  const refreshToken = createRefreshToken(user);
+
+  await user.update({ refresh_token_hash: hashValue(refreshToken) });
+
+  return {
+    message: 'Login successful',
+    token,
+    refreshToken,
+    user: sanitizeUser(user)
+  };
+}
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -53,11 +73,7 @@ const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: 'Invalid email or password' });
   }
 
-  res.json({
-    message: 'Login successful',
-    token: createToken(user),
-    user: sanitizeUser(user)
-  });
+  res.json(await buildAuthResponse(user));
 });
 
 const register = asyncHandler(async (req, res) => {
@@ -100,6 +116,11 @@ const register = asyncHandler(async (req, res) => {
     entityId: user.id,
     message: `Registered ${user.role} user ${user.email}`
   });
+  await sendEmail({
+    to: user.email,
+    subject: 'EvalSystem registration received',
+    text: 'Your account was created and is waiting for admin approval.'
+  });
 
   res.status(201).json({
     message: 'Registration submitted. Your account is waiting for admin approval.',
@@ -107,7 +128,123 @@ const register = asyncHandler(async (req, res) => {
   });
 });
 
+const forgotPassword = asyncHandler(async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+
+  const user = await User.findOne({ where: { email, deleted_at: null } });
+
+  // Keep the response generic so attackers cannot check if an email exists.
+  if (!user) {
+    return res.json({ message: 'If this email exists, a reset code has been sent.' });
+  }
+
+  const otp = generateOtp();
+
+  await user.update({
+    reset_otp_hash: hashValue(otp),
+    reset_otp_expires_at: getResetOtpExpiresAt()
+  });
+  await sendPasswordResetEmail(user, otp);
+  await logAudit({
+    actorId: user.id,
+    action: 'REQUEST_PASSWORD_RESET',
+    entityType: 'User',
+    entityId: user.id,
+    message: `Password reset requested for ${user.email}`
+  });
+
+  res.json({ message: 'If this email exists, a reset code has been sent.' });
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  const { otp, password } = req.body;
+
+  if (!email || !otp || !password) {
+    return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+  }
+
+  if (String(password).length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters' });
+  }
+
+  const user = await User.findOne({ where: { email, deleted_at: null } });
+
+  if (!user || !user.reset_otp_hash || !user.reset_otp_expires_at) {
+    return res.status(400).json({ message: 'Invalid or expired reset code' });
+  }
+
+  if (new Date(user.reset_otp_expires_at).getTime() < Date.now()) {
+    return res.status(400).json({ message: 'Invalid or expired reset code' });
+  }
+
+  if (hashValue(otp) !== user.reset_otp_hash) {
+    return res.status(400).json({ message: 'Invalid or expired reset code' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await user.update({
+    password_hash: passwordHash,
+    reset_otp_hash: null,
+    reset_otp_expires_at: null,
+    refresh_token_hash: null
+  });
+  await logAudit({
+    actorId: user.id,
+    action: 'RESET_PASSWORD',
+    entityType: 'User',
+    entityId: user.id,
+    message: `Password reset completed for ${user.email}`
+  });
+
+  res.json({ message: 'Password reset successfully. You can now log in.' });
+});
+
+const refreshToken = asyncHandler(async (req, res) => {
+  const { refreshToken: token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ message: 'Refresh token is required' });
+  }
+
+  let payload;
+
+  try {
+    payload = verifyRefreshToken(token);
+  } catch {
+    return res.status(401).json({ message: 'Invalid or expired refresh token' });
+  }
+
+  const user = await User.findByPk(payload.id);
+
+  if (!user || user.deleted_at || user.status !== USER_STATUSES.APPROVED || user.refresh_token_hash !== hashValue(token)) {
+    return res.status(401).json({ message: 'Invalid or expired refresh token' });
+  }
+
+  res.json(await buildAuthResponse(user));
+});
+
+const logout = asyncHandler(async (req, res) => {
+  const { refreshToken: token } = req.body;
+
+  if (token) {
+    const tokenHash = hashValue(token);
+    await User.update({ refresh_token_hash: null }, { where: { refresh_token_hash: tokenHash } });
+  }
+
+  res.json({ message: 'Logged out successfully' });
+});
+
 module.exports = {
   login,
-  register
+  register,
+  forgotPassword,
+  resetPassword,
+  refreshToken,
+  logout
 };

@@ -37,6 +37,16 @@ const optionalDeletedByColumn = {
   allowNull: true
 };
 
+const optionalStringColumn = {
+  type: DataTypes.STRING,
+  allowNull: true
+};
+
+const optionalDateColumn = {
+  type: DataTypes.DATE,
+  allowNull: true
+};
+
 async function describeTable(queryInterface, tableName) {
   try {
     return await queryInterface.describeTable(tableName);
@@ -155,6 +165,9 @@ async function ensureDateColumns(sequelize) {
   await dropColumnIfExists(queryInterface, 'users', 'otp_expires_at');
   await ensureColumn(queryInterface, 'users', 'deleted_at', optionalDeletedAtColumn);
   await ensureColumn(queryInterface, 'users', 'deleted_by', optionalDeletedByColumn);
+  await ensureColumn(queryInterface, 'users', 'refresh_token_hash', optionalStringColumn);
+  await ensureColumn(queryInterface, 'users', 'reset_otp_hash', optionalStringColumn);
+  await ensureColumn(queryInterface, 'users', 'reset_otp_expires_at', optionalDateColumn);
   await ensureColumn(queryInterface, 'exams', 'deleted_at', optionalDeletedAtColumn);
   await ensureColumn(queryInterface, 'exams', 'deleted_by', optionalDeletedByColumn);
 }

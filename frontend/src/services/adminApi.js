@@ -33,4 +33,10 @@ export const adminApi = {
   getAuditLogs(params) {
     return api.get("/admin/audit-logs", { params });
   },
+  getAnalytics() {
+    return api.get("/admin/analytics");
+  },
+  downloadReport(type) {
+    return api.get(`/admin/reports/${type}`, { responseType: "blob" });
+  },
 };

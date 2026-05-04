@@ -13,7 +13,7 @@ export const USER_STATUSES = {
 };
 
 export const ROLE_HOME_PATHS = {
-  [USER_ROLES.ADMIN]: "/admin/users",
+  [USER_ROLES.ADMIN]: "/admin/dashboard",
   [USER_ROLES.HR]: "/hr/dashboard",
   [USER_ROLES.EMPLOYEE]: "/employee/dashboard",
 };

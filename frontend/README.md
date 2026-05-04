@@ -7,11 +7,15 @@ For the complete full-stack setup guide, see the root `README.md`.
 ## Features
 
 - Email/password login with JWT-backed API requests.
+- Automatic refresh-token handling.
+- Forgot password screen.
 - HR and employee registration.
 - Role-based routing for admin, HR, and employee users.
 - Admin user approval screen.
 - Admin exam library screen with manual creation, Excel upload, and exam removal.
 - Admin audit logs screen.
+- Admin dashboard analytics screen.
+- Admin CSV reports screen.
 - Search, filter, and pagination on admin management pages.
 - HR screens for dashboard, employees, exams, assignments, and results.
 - Employee screens for dashboard, assigned exams, exam slides, evidence uploads, and personal results.
@@ -71,10 +75,13 @@ http://localhost:5173
 | Route | Description |
 | --- | --- |
 | `/login` | Login with email and password. |
+| `/forgot-password` | Request a reset code and set a new password. |
 | `/register` | Register an HR or employee account. |
+| `/admin/dashboard` | Admin analytics overview. |
 | `/admin/users` | Admin-only screen for approving or rejecting users. |
 | `/admin/exams` | Admin-only screen for creating and removing exams. |
 | `/admin/audit-logs` | Admin-only screen for reviewing important actions. |
+| `/admin/reports` | Admin-only screen for exporting CSV reports. |
 
 Seeded login accounts after running the backend seed:
 

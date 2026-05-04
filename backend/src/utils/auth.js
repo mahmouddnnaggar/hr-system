@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const USER_ROLES = {
@@ -22,6 +23,10 @@ const PUBLIC_USER_ATTRIBUTES = [
   'deleted_by'
 ];
 
+function hashValue(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
@@ -41,6 +46,10 @@ function getJwtSecret() {
   return process.env.JWT_SECRET;
 }
 
+function getRefreshTokenSecret() {
+  return process.env.REFRESH_TOKEN_SECRET || getJwtSecret();
+}
+
 function createToken(user) {
   return jwt.sign(
     {
@@ -52,8 +61,33 @@ function createToken(user) {
   );
 }
 
+function createRefreshToken(user) {
+  return jwt.sign(
+    {
+      id: user.id,
+      role: user.role,
+      type: 'refresh'
+    },
+    getRefreshTokenSecret(),
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
+  );
+}
+
 function verifyToken(token) {
   return jwt.verify(token, getJwtSecret());
+}
+
+function verifyRefreshToken(token) {
+  return jwt.verify(token, getRefreshTokenSecret());
+}
+
+function generateOtp() {
+  return crypto.randomInt(100000, 1000000).toString();
+}
+
+function getResetOtpExpiresAt() {
+  const minutes = Number(process.env.RESET_OTP_EXPIRES_MINUTES || 10);
+  return new Date(Date.now() + minutes * 60 * 1000);
 }
 
 function sanitizeUser(user) {
@@ -80,7 +114,12 @@ module.exports = {
   PUBLIC_USER_ATTRIBUTES,
   normalizeEmail,
   normalizeRole,
+  hashValue,
+  generateOtp,
+  getResetOtpExpiresAt,
   createToken,
+  createRefreshToken,
   verifyToken,
+  verifyRefreshToken,
   sanitizeUser
 };
